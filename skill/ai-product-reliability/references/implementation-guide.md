@@ -13,6 +13,9 @@ Apply the smallest safe change first.
 7. Add smoke tests.
 8. Add CI checks.
 9. Add readiness checks and dependency checks.
+10. Add SDK telemetry if the product has runtime traffic.
+11. Register the project with the dashboard using `node cli/src/index.mjs push <project>`.
+12. Generate operations artifacts using `node cli/src/index.mjs automate <project> --out <dir>`.
 
 ## New Project Order
 
@@ -56,4 +59,5 @@ After changes:
 2. Run the kit CLI scan again.
 3. Confirm score increased or missing high-risk items decreased.
 4. If docs were generated, skim for inaccurate assumptions.
-
+5. If SDK telemetry was added, send a test event to the dashboard and confirm `/api/summary` changes.
+6. If automation artifacts were generated, confirm monitors, alerts, status page, and incident package exist.

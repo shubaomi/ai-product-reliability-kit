@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-product-reliability-kit.local/schemas/telemetry-envelope.schema.json",
+  "title": "AI Product Reliability Telemetry Envelope",
+  "type": "object",
+  "required": ["schema_version", "type", "product_id", "environment", "release", "occurred_at", "payload"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["product", "event", "error", "health", "release"]
+    },
+    "product_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "environment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "release": {
+      "type": "string",
+      "minLength": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "anonymous_id": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}
+

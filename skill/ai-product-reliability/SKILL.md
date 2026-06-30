@@ -7,7 +7,7 @@ description: Audit and improve AI-built products against the AI Product Reliabil
 
 ## Overview
 
-Use this skill to make a project safer to operate without rewriting it first. Prefer small, verifiable changes: product contract, health checks, release identity, error tracking, core events, smoke tests, CI, system passport, runbook, and rollback guide.
+Use this skill to make a project safer to operate without rewriting it first. Prefer small, verifiable changes: product contract, health checks, release identity, SDK telemetry, error tracking, core events, smoke tests, CI, dashboard registration, automation artifacts, system passport, runbook, and rollback guide.
 
 ## Workflow
 
@@ -17,7 +17,10 @@ Use this skill to make a project safer to operate without rewriting it first. Pr
 4. For implementation work, read `references/implementation-guide.md`.
 5. For existing projects or standard version changes, read `references/migration-guide.md`.
 6. Make the smallest changes that move the project to the next capability level.
-7. Verify with the project test/build commands and rerun the kit scan.
+7. For runtime integration, use the SDK docs in `docs/sdk.md` and the ingestion protocol in `standard/ingestion-protocol.md`.
+8. For dashboard work, use `docs/dashboard.md` and prefer the local collector before external providers.
+9. For automation, run `node cli/src/index.mjs automate <project> --out <dir>`.
+10. Verify with the project test/build commands and rerun the kit scan.
 
 ## Decision Rules
 
@@ -27,6 +30,7 @@ Use this skill to make a project safer to operate without rewriting it first. Pr
 - Treat missing rollback guidance as a production risk.
 - Prefer compatibility warnings over breaking old projects.
 - For existing production systems, avoid invasive refactors unless the current architecture blocks observability or rollback.
+- Prefer provider-neutral monitor and alert definitions before hard-coding an external service.
 
 ## Output Shape
 

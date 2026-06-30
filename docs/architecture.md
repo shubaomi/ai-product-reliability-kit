@@ -1,6 +1,6 @@
 # Architecture
 
-Stage 1 intentionally separates reusable standards from future runtime infrastructure.
+The kit is a monorepo with standards, SDKs, a local dashboard, automation generators, templates, examples, and a Codex skill.
 
 ```mermaid
 flowchart TD
@@ -12,6 +12,11 @@ flowchart TD
   T --> P
   STD["Core standard and schemas"] --> C
   STD --> K
+  SDK["Node/Python/Java SDKs"] --> API["Dashboard collector API"]
+  P --> SDK
+  API --> D["Local dashboard"]
+  A["Automation generator"] --> M["Monitors, alerts, status page, incident package"]
+  C --> A
 ```
 
 ## Components
@@ -20,22 +25,21 @@ flowchart TD
 | --- | --- |
 | Standard | Defines the contract and compatibility rules. |
 | CLI | Scans projects, reports gaps, and generates passport drafts. |
+| SDKs | Send product, event, error, health, and release envelopes to collectors. |
+| Dashboard | Provides local product inventory, health, event, error, release, monitor, and alert views. |
+| Automation | Generates provider-neutral operations artifacts from `product.yml`. |
 | Skill | Guides AI agents to audit and improve projects consistently. |
 | Templates | Provide reusable docs, CI, product contract, and smoke tests. |
 | Examples | Prove the MVP can scan a representative project. |
 
-## Why No Central Dashboard Yet
-
-The dashboard depends on stable product contracts and event semantics. Stage 1 creates those foundations first. Later phases can ingest `product.yml`, events, errors, uptime checks, and release metadata into one dashboard.
-
-## Future Data Flow
+## Data Flow
 
 ```mermaid
 flowchart LR
   A["Product SDK/Adapter"] --> B["Collector API"]
-  B --> C["Storage"]
+  B --> C["Local JSON storage"]
   C --> D["Central Dashboard"]
-  D --> E["Alerts"]
-  D --> F["AI Incident Package"]
+  G["product.yml"] --> H["Automation generator"]
+  H --> E["Alerts"]
+  H --> F["AI Incident Package"]
 ```
-

@@ -1,0 +1,15 @@
+{
+  "name": "ai-product-reliability-kit",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "npm --prefix cli test && npm --prefix sdks/node test && python -m unittest discover -s sdks/python/tests && npm --prefix apps/dashboard test && npm --prefix automation test && node scripts/check-java-sdk.mjs",
+    "dashboard": "node apps/dashboard/server.mjs",
+    "automate:example": "node automation/src/index.mjs generate examples/node-nextjs --out .tmp/automation-example",
+    "scan:example": "node cli/src/index.mjs scan examples/node-nextjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,13 +1,16 @@
 # AI Product Reliability Kit
 
-Reusable standards, templates, a Codex skill, and a lightweight CLI for making AI-built products easier to understand, monitor, debug, and safely evolve.
+Reusable standards, SDKs, dashboard, automation, templates, a Codex skill, and a CLI for making AI-built products easier to understand, monitor, debug, and safely evolve.
 
-This repository is the stage 1 MVP. It focuses on project audit, product contract, documentation, and safe adoption. Runtime SDKs and a central dashboard are planned later.
+This repository now includes the staged implementation path: audit kit, SDKs, local dashboard, and provider-neutral operations automation.
 
 ## What Is Included
 
 - `standard/` - Core reliability standard, product contract schema, event, health, and release compatibility guidance.
 - `cli/` - Dependency-light Node.js CLI that scans a project and reports missing reliability controls.
+- `sdks/` - Lightweight Node, Python, and Java clients for the ingestion protocol.
+- `apps/dashboard/` - Local central dashboard and collector API.
+- `automation/` - Monitor, alert, status page, and AI incident package generator.
 - `skill/ai-product-reliability/` - Codex skill for auditing or improving projects with this standard.
 - `templates/` - Product contract, documentation, CI, and smoke test templates.
 - `examples/node-nextjs/` - Minimal example project that follows the MVP standard.
@@ -18,6 +21,24 @@ This repository is the stage 1 MVP. It focuses on project audit, product contrac
 ```bash
 cd E:/Projects/ai-product-reliability-kit
 node cli/src/index.mjs scan examples/node-nextjs
+```
+
+Start the dashboard:
+
+```bash
+npm run dashboard
+```
+
+Push the example product and scan result into the dashboard:
+
+```bash
+node cli/src/index.mjs push examples/node-nextjs
+```
+
+Generate monitors, alerts, status page, and AI incident package:
+
+```bash
+node cli/src/index.mjs automate examples/node-nextjs --out .tmp/automation-example
 ```
 
 Write a system passport draft into a target project:
@@ -51,6 +72,12 @@ A scanned project should produce:
 - Risk grade and weighted score.
 - Prioritized adoption plan.
 - System passport draft.
+
+## Stage 2-4 Success Criteria
+
+- SDKs send product, event, error, health, and release envelopes to `/api/ingest`.
+- Dashboard shows registered products, health, events, errors, monitors, and alerts.
+- Automation generates provider-neutral monitor definitions, alert rules, status page draft, and AI incident package from `product.yml`.
 
 ## Adoption Model
 

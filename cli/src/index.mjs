@@ -138,6 +138,25 @@ async function main() {
     return;
   }
 
+  if (command === "automate") {
+    const options = parseAutomationArgs(args);
+    const { generateAutomation } = await import("../../automation/src/generate.mjs");
+    const result = await generateAutomation(path.resolve(process.cwd(), options.target), {
+      outDir: options.out,
+      dashboardUrl: options.dashboardUrl
+    });
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    return;
+  }
+
+  if (command === "push") {
+    const options = parsePushArgs(args);
+    const target = path.resolve(process.cwd(), options.target);
+    const result = await pushToDashboard(target, options.dashboardUrl);
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    return;
+  }
+
   if (command !== "scan") {
     fail(`Unknown command: ${command}`);
   }
@@ -198,6 +217,61 @@ function parseScanArgs(args) {
   return options;
 }
 
+function parseAutomationArgs(args) {
+  const options = {
+    target: undefined,
+    out: undefined,
+    dashboardUrl: "http://127.0.0.1:8787"
+  };
+
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === "--out") {
+      i += 1;
+      if (!args[i]) fail("--out requires a directory");
+      options.out = args[i];
+    } else if (arg === "--dashboard-url") {
+      i += 1;
+      if (!args[i]) fail("--dashboard-url requires a URL");
+      options.dashboardUrl = args[i];
+    } else if (arg.startsWith("--")) {
+      fail(`Unknown option: ${arg}`);
+    } else if (!options.target) {
+      options.target = arg;
+    } else {
+      fail(`Unexpected argument: ${arg}`);
+    }
+  }
+
+  if (!options.target) fail("automate requires a project path");
+  return options;
+}
+
+function parsePushArgs(args) {
+  const options = {
+    target: undefined,
+    dashboardUrl: "http://127.0.0.1:8787"
+  };
+
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === "--dashboard-url") {
+      i += 1;
+      if (!args[i]) fail("--dashboard-url requires a URL");
+      options.dashboardUrl = args[i];
+    } else if (arg.startsWith("--")) {
+      fail(`Unknown option: ${arg}`);
+    } else if (!options.target) {
+      options.target = arg;
+    } else {
+      fail(`Unexpected argument: ${arg}`);
+    }
+  }
+
+  if (!options.target) fail("push requires a project path");
+  return options;
+}
+
 async function scanProject(root) {
   const stat = await fs.stat(root).catch(() => null);
   if (!stat?.isDirectory()) {
@@ -246,7 +320,7 @@ async function scanProject(root) {
 
   return {
     tool: "ai-product-reliability-cli",
-    tool_version: "0.1.0",
+    tool_version: "0.4.0",
     generated_at: new Date().toISOString(),
     summary,
     findings,
@@ -452,6 +526,74 @@ ${report.passportDraft}
 `;
 }
 
+async function pushToDashboard(target, dashboardUrl) {
+  const report = await scanProject(target);
+  const { parseProductContract } = await import("../../automation/src/generate.mjs");
+  const contractText = await fs.readFile(path.join(target, "product.yml"), "utf8");
+  const contract = parseProductContract(contractText);
+  const endpoint = dashboardUrl.replace(/\/$/, "");
+  const productResponse = await postJson(`${endpoint}/api/products`, {
+    standard_version: contract.standard_version,
+    product: contract.product,
+    environments: contract.environments,
+    critical_journeys: contract.critical_journeys
+  });
+  const ingestResponse = await postJson(`${endpoint}/api/ingest`, {
+    items: [
+      {
+        schema_version: "1.0",
+        type: "event",
+        product_id: contract.product.id,
+        environment: "local",
+        release: "cli-scan",
+        occurred_at: new Date().toISOString(),
+        payload: {
+          event: "reliability_scan_completed",
+          properties: {
+            score: report.summary.score,
+            grade: report.summary.grade,
+            missing_count: report.summary.missing_count
+          }
+        }
+      },
+      {
+        schema_version: "1.0",
+        type: "health",
+        product_id: contract.product.id,
+        environment: "local",
+        release: "cli-scan",
+        occurred_at: new Date().toISOString(),
+        payload: {
+          ok: report.summary.missing_count === 0,
+          checks: {
+            reliability_scan: report.summary.missing_count === 0
+          }
+        }
+      }
+    ]
+  });
+
+  return {
+    product_id: contract.product.id,
+    dashboard_url: endpoint,
+    score: report.summary.score,
+    product_response: productResponse,
+    ingest_response: ingestResponse
+  };
+}
+
+async function postJson(url, payload) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error(`POST ${url} failed: ${response.status}`);
+  }
+  return response.json().catch(() => ({ ok: true }));
+}
+
 function productContractText(ctx) {
   if (!ctx.productContractPath) return null;
   return ctx.textFiles.find((file) => file.path === ctx.productContractPath)?.text ?? null;
@@ -488,9 +630,13 @@ function printHelp() {
 
 Usage:
   node cli/src/index.mjs scan <project-path> [--json] [--out <file>] [--write-passport]
+  node cli/src/index.mjs automate <project-path> [--out <dir>] [--dashboard-url <url>]
+  node cli/src/index.mjs push <project-path> [--dashboard-url <url>]
 
 Commands:
   scan              Scan a project for MVP reliability controls.
+  automate          Generate monitors, alerts, status page, and AI incident package.
+  push              Register a project and scan result with the dashboard.
 
 Options:
   --json            Output JSON instead of Markdown.

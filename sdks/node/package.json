@@ -1,0 +1,17 @@
+{
+  "name": "@ai-product-reliability/sdk-node",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "scripts": {
+    "test": "node test/sdk.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
+
