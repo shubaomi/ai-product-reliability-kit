@@ -15,7 +15,7 @@ node cli/src/index.mjs automate examples/node-nextjs --out .tmp/automation-examp
 For a production dashboard with auth enabled:
 
 ```bash
-node cli/src/index.mjs automate examples/node-nextjs --dashboard-url https://reliability.example.com --api-key replace-with-master-key --register-dashboard
+node cli/src/index.mjs automate examples/node-nextjs --dashboard-url https://reliability.hihongrun.com --api-key replace-with-master-key --register-dashboard
 ```
 
 Generated files:

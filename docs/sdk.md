@@ -23,7 +23,7 @@ const client = createReliabilityClient({
   productId: "invoice-ai",
   environment: "production",
   release: process.env.GIT_SHA,
-  endpoint: "https://reliability.example.com",
+  endpoint: "https://reliability.hihongrun.com",
   apiKey: process.env.APR_INGEST_API_KEY
 });
 
@@ -42,7 +42,7 @@ client = ReliabilityClient(
     product_id="invoice-ai",
     environment="production",
     release="git:abc1234",
-    endpoint="https://reliability.example.com",
+    endpoint="https://reliability.hihongrun.com",
     api_key=os.environ["APR_INGEST_API_KEY"],
 )
 
@@ -60,7 +60,7 @@ ReliabilityClient client = new ReliabilityClient(
     "invoice-ai",
     "production",
     "git:abc1234",
-    "https://reliability.example.com",
+    "https://reliability.hihongrun.com",
     System.getenv("APR_INGEST_API_KEY")
 );
 ```

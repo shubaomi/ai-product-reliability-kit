@@ -22,9 +22,40 @@ Generate the admin password hash:
 npm --prefix apps/dashboard run hash-password -- "replace-with-a-strong-password"
 ```
 
-Put the hash into `APR_ADMIN_PASSWORD_HASH` in `.env`. Keep the plain password outside the repository.
+Put the hash into `APR_ADMIN_PASSWORD_HASH`. Keep the plain password outside the repository.
 
-## 2. Start The Platform
+## 2. PM2 + Nginx Deployment
+
+The current production server layout is:
+
+```text
+source: /data/claude_project/ai-product-reliability-kit
+prod:   /data/prod/ai-product-reliability-kit
+domain: reliability.hihongrun.com
+port:   8787
+```
+
+Create the production env file:
+
+```bash
+mkdir -p /data/prod/ai-product-reliability-kit
+cp /data/claude_project/ai-product-reliability-kit/.env.example /data/prod/ai-product-reliability-kit/.env.production
+```
+
+Fill `/data/prod/ai-product-reliability-kit/.env.production`, then deploy:
+
+```bash
+cd /data/claude_project/ai-product-reliability-kit
+git pull origin main
+chmod +x deploy.sh
+./deploy.sh
+```
+
+The script syncs source to the production directory, installs `apps/dashboard` dependencies, applies Postgres migrations, restarts PM2, saves the PM2 process list, and verifies `http://127.0.0.1:8787/api/status`.
+
+Configure Nginx to proxy `https://reliability.hihongrun.com` to `127.0.0.1:8787`.
+
+## 3. Docker Compose Alternative
 
 ```bash
 docker compose up -d --build
@@ -38,7 +69,7 @@ docker compose run --rm dashboard npm run migrate
 
 Open the dashboard at `PUBLIC_BASE_URL` or `http://localhost:8787` and sign in with `APR_ADMIN_EMAIL` plus the password used to create `APR_ADMIN_PASSWORD_HASH`.
 
-## 3. Register Products
+## 4. Register Products
 
 Use the master key for admin operations:
 
@@ -54,12 +85,12 @@ const client = createReliabilityClient({
   productId: "invoice-ai",
   environment: "production",
   release: process.env.GIT_SHA,
-  endpoint: "https://reliability.example.com",
+  endpoint: "https://reliability.hihongrun.com",
   apiKey: process.env.APR_INGEST_API_KEY
 });
 ```
 
-## 4. Operate
+## 5. Operate
 
 - Dashboard: `/`
 - Public fleet status: `/status`
@@ -71,6 +102,6 @@ const client = createReliabilityClient({
 
 Configure `APR_ALERT_WEBHOOK_URL` or `APR_ALERT_FEISHU_WEBHOOK_URL` to forward alert deliveries. Monitor runs and alert deliveries are stored in Postgres for later diagnosis.
 
-## 5. Upgrade Policy
+## 6. Upgrade Policy
 
 The ingestion protocol stays compatible within schema version `1.0`: add optional fields, do not rename existing fields, and keep collectors tolerant of unknown fields. When the platform standard changes, run the CLI scan against connected products first, review the adoption plan, then apply changes product by product.
