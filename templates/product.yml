@@ -1,0 +1,46 @@
+standard_version: "1.0"
+
+product:
+  id: "replace-me"
+  name: "Replace Me"
+  owner: "owner@example.com"
+  description: "Short description of what this product does."
+  repo: ""
+
+environments:
+  - name: "production"
+    url: "https://example.com"
+  - name: "staging"
+    url: ""
+
+critical_journeys:
+  - id: "signup"
+    name: "User signs up"
+    success_event: "user_signed_up"
+    failure_event: "signup_failed"
+    synthetic_check: "tests/playwright-smoke.spec.ts"
+  - id: "core_action"
+    name: "User completes the core product action"
+    success_event: "core_action_completed"
+    failure_event: "core_action_failed"
+
+health:
+  live_path: "/healthz"
+  ready_path: "/readyz"
+  dependencies:
+    - "database"
+    - "external_api"
+
+release:
+  version_source: "git_sha"
+  rollback: "docs/rollback.md"
+
+capabilities:
+  health_check: false
+  error_tracking: false
+  product_events: false
+  release_tracking: false
+  smoke_tests: false
+  ci_quality_gate: false
+  rollback_runbook: false
+

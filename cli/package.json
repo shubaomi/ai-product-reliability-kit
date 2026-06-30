@@ -1,0 +1,17 @@
+{
+  "name": "@ai-product-reliability/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "ai-product-reliability": "./src/index.mjs"
+  },
+  "scripts": {
+    "scan:example": "node src/index.mjs scan ../examples/node-nextjs",
+    "test": "node src/index.mjs scan ../examples/node-nextjs --json --out ../.tmp/example-report.json"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
+

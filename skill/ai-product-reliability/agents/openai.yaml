@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Product Reliability"
+  short_description: "Audit and improve AI-built products for production reliability."
+  default_prompt: "Audit this project against the AI Product Reliability Standard and propose the smallest safe implementation plan."

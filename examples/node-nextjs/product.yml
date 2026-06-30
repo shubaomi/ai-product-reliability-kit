@@ -1,0 +1,46 @@
+standard_version: "1.0"
+
+product:
+  id: "reliable-nextjs-example"
+  name: "Reliable Next.js Example"
+  owner: "owner@example.com"
+  description: "Minimal example for AI Product Reliability Kit."
+  repo: "E:/Projects/ai-product-reliability-kit/examples/node-nextjs"
+
+environments:
+  - name: "production"
+    url: "https://example.com"
+  - name: "staging"
+    url: "https://staging.example.com"
+
+critical_journeys:
+  - id: "signup"
+    name: "User signs up"
+    success_event: "user_signed_up"
+    failure_event: "signup_failed"
+    synthetic_check: "tests/playwright-smoke.spec.ts"
+  - id: "core_action"
+    name: "User completes example core action"
+    success_event: "core_action_completed"
+    failure_event: "core_action_failed"
+
+health:
+  live_path: "/healthz"
+  ready_path: "/readyz"
+  dependencies:
+    - "database"
+    - "external_api"
+
+release:
+  version_source: "git_sha"
+  rollback: "docs/rollback.md"
+
+capabilities:
+  health_check: true
+  error_tracking: true
+  product_events: true
+  release_tracking: true
+  smoke_tests: true
+  ci_quality_gate: true
+  rollback_runbook: true
+

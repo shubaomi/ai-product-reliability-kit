@@ -1,0 +1,19 @@
+{
+  "name": "reliable-nextjs-example",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "lint": "echo \"lint placeholder\"",
+    "typecheck": "echo \"typecheck placeholder\"",
+    "test": "echo \"test placeholder\"",
+    "build": "echo \"build placeholder\""
+  },
+  "dependencies": {
+    "@sentry/nextjs": "^9.0.0",
+    "posthog-js": "^1.200.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0"
+  }
+}
+
