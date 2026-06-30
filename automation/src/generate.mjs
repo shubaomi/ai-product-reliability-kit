@@ -31,12 +31,17 @@ export async function generateAutomation(projectPath, options = {}) {
     await fs.writeFile(path.join(outDir, name), contents, "utf8");
   }
 
+  const dashboardRegistrations = options.registerDashboard
+    ? await registerDashboardArtifacts(dashboardUrl, contract, monitors, alerts, statusPage)
+    : null;
+
   return {
     product_id: contract.product.id,
     outDir,
     files: Object.keys(files).map((name) => path.join(outDir, name)),
     monitors,
-    alerts
+    alerts,
+    dashboardRegistrations
   };
 }
 
@@ -184,6 +189,35 @@ Use the files in this package plus the latest logs, events, errors, and release 
 `;
 }
 
+async function registerDashboardArtifacts(dashboardUrl, contract, monitors, alerts, statusPage) {
+  const endpoint = dashboardUrl.replace(/\/$/, "");
+  const monitorResult = await postJson(`${endpoint}/api/monitors`, { items: monitors });
+  const alertResult = await postJson(`${endpoint}/api/alerts`, { items: alerts });
+  const statusResult = await postJson(`${endpoint}/api/status-pages`, {
+    product_id: contract.product.id,
+    title: `${contract.product.name} Status Page`,
+    body: statusPage,
+    generated_at: new Date().toISOString()
+  });
+  return {
+    monitors: monitorResult,
+    alerts: alertResult,
+    status_page: statusResult
+  };
+}
+
+async function postJson(url, payload) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error(`POST ${url} failed: ${response.status}`);
+  }
+  return response.json().catch(() => ({ ok: true }));
+}
+
 async function findContract(root) {
   for (const candidate of ["product.yml", "product.yaml", "reliability/product.yml", "config/product.yml"]) {
     const fullPath = path.join(root, candidate);
@@ -266,4 +300,3 @@ function scalar(text, key) {
   const match = text.match(new RegExp(`(?:^|\\n)\\s*${key}:\\s*["']?([^"'\\n]+)["']?`, "i"));
   return match?.[1]?.trim() ?? null;
 }
-

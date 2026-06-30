@@ -32,6 +32,8 @@ function parseArgs(args) {
       i += 1;
       if (!args[i]) fail("--dashboard-url requires a URL");
       options.dashboardUrl = args[i];
+    } else if (arg === "--register-dashboard") {
+      options.registerDashboard = true;
     } else {
       fail(`Unknown option: ${arg}`);
     }
@@ -43,7 +45,7 @@ function printHelp() {
   process.stdout.write(`AI Product Reliability Automation
 
 Usage:
-  node automation/src/index.mjs generate <project-path> [--out <dir>] [--dashboard-url <url>]
+  node automation/src/index.mjs generate <project-path> [--out <dir>] [--dashboard-url <url>] [--register-dashboard]
 
 Generates:
   monitors.json
@@ -62,4 +64,3 @@ main().catch((error) => {
   process.stderr.write(`${error.stack ?? error.message}\n`);
   process.exit(1);
 });
-

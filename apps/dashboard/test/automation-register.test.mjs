@@ -1,0 +1,47 @@
+import assert from "node:assert/strict";
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
+import { createDashboardServer } from "../server.mjs";
+
+const execFileAsync = promisify(execFile);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "../../..");
+const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "apr-automation-register-"));
+const storePath = path.join(tempDir, "store.json");
+const outDir = path.join(tempDir, "generated");
+const server = await createDashboardServer({ storePath });
+await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+const { port } = server.address();
+const base = `http://127.0.0.1:${port}`;
+
+try {
+  const { stdout } = await execFileAsync(process.execPath, [
+    "cli/src/index.mjs",
+    "automate",
+    "examples/node-nextjs",
+    "--out",
+    outDir,
+    "--dashboard-url",
+    base,
+    "--register-dashboard"
+  ], { cwd: repoRoot });
+
+  const result = JSON.parse(stdout);
+  assert.equal(result.dashboardRegistrations.monitors.accepted, 5);
+  assert.equal(result.dashboardRegistrations.alerts.accepted, 3);
+  assert.equal(result.dashboardRegistrations.status_page.accepted, 1);
+
+  const summary = await fetch(`${base}/api/summary`).then((response) => response.json());
+  assert.equal(summary.monitors, 5);
+  assert.equal(summary.alerts, 3);
+} finally {
+  await new Promise((resolve) => server.close(resolve));
+  await fs.rm(tempDir, { recursive: true, force: true });
+}
+
+console.log("Automation dashboard registration test OK");
+

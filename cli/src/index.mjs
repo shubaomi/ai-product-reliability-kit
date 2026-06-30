@@ -143,7 +143,8 @@ async function main() {
     const { generateAutomation } = await import("../../automation/src/generate.mjs");
     const result = await generateAutomation(path.resolve(process.cwd(), options.target), {
       outDir: options.out,
-      dashboardUrl: options.dashboardUrl
+      dashboardUrl: options.dashboardUrl,
+      registerDashboard: options.registerDashboard
     });
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     return;
@@ -221,7 +222,8 @@ function parseAutomationArgs(args) {
   const options = {
     target: undefined,
     out: undefined,
-    dashboardUrl: "http://127.0.0.1:8787"
+    dashboardUrl: "http://127.0.0.1:8787",
+    registerDashboard: false
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -234,6 +236,8 @@ function parseAutomationArgs(args) {
       i += 1;
       if (!args[i]) fail("--dashboard-url requires a URL");
       options.dashboardUrl = args[i];
+    } else if (arg === "--register-dashboard") {
+      options.registerDashboard = true;
     } else if (arg.startsWith("--")) {
       fail(`Unknown option: ${arg}`);
     } else if (!options.target) {
@@ -630,7 +634,7 @@ function printHelp() {
 
 Usage:
   node cli/src/index.mjs scan <project-path> [--json] [--out <file>] [--write-passport]
-  node cli/src/index.mjs automate <project-path> [--out <dir>] [--dashboard-url <url>]
+  node cli/src/index.mjs automate <project-path> [--out <dir>] [--dashboard-url <url>] [--register-dashboard]
   node cli/src/index.mjs push <project-path> [--dashboard-url <url>]
 
 Commands:

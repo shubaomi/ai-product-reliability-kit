@@ -41,6 +41,12 @@ Generate monitors, alerts, status page, and AI incident package:
 node cli/src/index.mjs automate examples/node-nextjs --out .tmp/automation-example
 ```
 
+Register those generated operations artifacts with the running dashboard:
+
+```bash
+node cli/src/index.mjs automate examples/node-nextjs --out .tmp/automation-example --register-dashboard
+```
+
 Write a system passport draft into a target project:
 
 ```bash
