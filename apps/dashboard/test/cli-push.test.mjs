@@ -12,7 +12,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../..");
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "apr-push-"));
 const storePath = path.join(tempDir, "store.json");
-const server = await createDashboardServer({ storePath });
+const apiKey = "cli-push-master-key";
+const server = await createDashboardServer({
+  storePath,
+  config: {
+    authRequired: true,
+    masterApiKey: apiKey,
+    sessionSecret: "cli-push-session-secret",
+    workerEnabled: false
+  }
+});
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const { port } = server.address();
 const base = `http://127.0.0.1:${port}`;
@@ -23,12 +32,16 @@ try {
     "push",
     path.join(repoRoot, "examples", "node-nextjs"),
     "--dashboard-url",
-    base
+    base,
+    "--api-key",
+    apiKey
   ], { cwd: repoRoot });
   const pushed = JSON.parse(stdout);
   assert.equal(pushed.product_id, "reliable-nextjs-example");
 
-  const summary = await fetch(`${base}/api/summary`).then((response) => response.json());
+  const summary = await fetch(`${base}/api/summary`, {
+    headers: { authorization: `Bearer ${apiKey}` }
+  }).then((response) => response.json());
   assert.equal(summary.products, 1);
   assert.equal(summary.events, 1);
   assert.equal(summary.latest_health["reliable-nextjs-example"].payload.ok, true);

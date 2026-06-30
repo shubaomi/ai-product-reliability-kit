@@ -8,67 +8,87 @@
   </head>
   <body>
     <main class="shell">
-      <header class="topbar">
+      <section class="login-panel panel" id="login-panel" hidden>
         <div>
           <p class="eyebrow">Reliability Operations</p>
-          <h1>Product Fleet</h1>
+          <h1>Admin Sign In</h1>
         </div>
-        <div class="status-pill" id="fleet-status">Loading</div>
-      </header>
-
-      <section class="metrics" aria-label="Fleet metrics">
-        <article><span id="product-count">0</span><small>Products</small></article>
-        <article><span id="event-count">0</span><small>Events</small></article>
-        <article><span id="error-count">0</span><small>Errors</small></article>
-        <article><span id="monitor-count">0</span><small>Monitors</small></article>
+        <form id="login-form" class="login-form">
+          <label>
+            Email
+            <input id="login-email" name="email" type="email" autocomplete="username" required>
+          </label>
+          <label>
+            Password
+            <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <button type="submit">Sign In</button>
+          <p class="form-error" id="login-error" role="alert"></p>
+        </form>
       </section>
 
-      <section class="grid">
-        <div class="panel span-7">
-          <div class="panel-head">
-            <h2>Products</h2>
-            <button id="refresh">Refresh</button>
+      <div id="dashboard-panel">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Reliability Operations</p>
+            <h1>Product Fleet</h1>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Owner</th>
-                  <th>Version</th>
-                  <th>Status</th>
-                  <th>Errors</th>
-                  <th>Events</th>
-                </tr>
-              </thead>
-              <tbody id="products"></tbody>
-            </table>
-          </div>
-        </div>
+          <div class="status-pill" id="fleet-status">Loading</div>
+        </header>
 
-        <div class="panel span-5">
-          <div class="panel-head">
-            <h2>Health</h2>
-          </div>
-          <div id="health-list" class="stack"></div>
-        </div>
+        <section class="metrics" aria-label="Fleet metrics">
+          <article><span id="product-count">0</span><small>Products</small></article>
+          <article><span id="event-count">0</span><small>Events</small></article>
+          <article><span id="error-count">0</span><small>Errors</small></article>
+          <article><span id="monitor-count">0</span><small>Monitors</small></article>
+        </section>
 
-        <div class="panel span-6">
-          <div class="panel-head">
-            <h2>Recent Events</h2>
+        <section class="grid">
+          <div class="panel span-7">
+            <div class="panel-head">
+              <h2>Products</h2>
+              <button id="refresh">Refresh</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Owner</th>
+                    <th>Version</th>
+                    <th>Status</th>
+                    <th>Errors</th>
+                    <th>Events</th>
+                  </tr>
+                </thead>
+                <tbody id="products"></tbody>
+              </table>
+            </div>
           </div>
-          <div id="events" class="timeline"></div>
-        </div>
 
-        <div class="panel span-6">
-          <div class="panel-head">
-            <h2>Recent Errors</h2>
+          <div class="panel span-5">
+            <div class="panel-head">
+              <h2>Health</h2>
+            </div>
+            <div id="health-list" class="stack"></div>
           </div>
-          <div id="errors" class="timeline danger"></div>
-        </div>
-      </section>
+
+          <div class="panel span-6">
+            <div class="panel-head">
+              <h2>Recent Events</h2>
+            </div>
+            <div id="events" class="timeline"></div>
+          </div>
+
+          <div class="panel span-6">
+            <div class="panel-head">
+              <h2>Recent Errors</h2>
+            </div>
+            <div id="errors" class="timeline danger"></div>
+          </div>
+        </section>
+      </div>
     </main>
     <script src="/app.js"></script>
   </body>
 </html>
-

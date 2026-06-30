@@ -12,7 +12,7 @@ const server = http.createServer(async (request, response) => {
 
   let body = "";
   for await (const chunk of request) body += chunk;
-  received.push(JSON.parse(body));
+  received.push({ body: JSON.parse(body), authorization: request.headers.authorization });
   response.writeHead(200, { "content-type": "application/json" });
   response.end(JSON.stringify({ accepted: JSON.parse(body).items.length }));
 });
@@ -25,7 +25,8 @@ try {
     productId: "sdk-node-test",
     environment: "test",
     release: "test-sha",
-    endpoint: `http://127.0.0.1:${port}`
+    endpoint: `http://127.0.0.1:${port}`,
+    apiKey: "node-sdk-key"
   });
 
   client.event("user_signed_up", { plan: "free" }, { anonymousId: "anon-1" });
@@ -36,8 +37,9 @@ try {
   const result = await client.flush();
   assert.equal(result.accepted, 3);
   assert.equal(client.queued().length, 0);
-  assert.equal(received[0].items[0].schema_version, "1.0");
-  assert.equal(received[0].items[0].product_id, "sdk-node-test");
+  assert.equal(received[0].authorization, "Bearer node-sdk-key");
+  assert.equal(received[0].body.items[0].schema_version, "1.0");
+  assert.equal(received[0].body.items[0].product_id, "sdk-node-test");
   assert.deepEqual(healthPayload({ database: true, cache: false }), {
     ok: false,
     checks: { database: true, cache: false }
@@ -47,4 +49,3 @@ try {
 }
 
 console.log("Node SDK tests OK");
-

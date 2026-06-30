@@ -20,7 +20,7 @@ class IngestHandler(BaseHTTPRequestHandler):
             return
         length = int(self.headers["content-length"])
         payload = json.loads(self.rfile.read(length).decode("utf-8"))
-        self.received.append(payload)
+        self.received.append({"payload": payload, "authorization": self.headers.get("authorization")})
         self.send_response(200)
         self.send_header("content-type", "application/json")
         self.end_headers()
@@ -41,6 +41,7 @@ class ReliabilityClientTest(unittest.TestCase):
                 environment="test",
                 release="test-sha",
                 endpoint=f"http://127.0.0.1:{server.server_port}",
+                api_key="python-sdk-key",
             )
             client.event("user_signed_up", {"plan": "free"}, anonymous_id="anon-1")
             client.error(ValueError("boom"), request_id="req-1")
@@ -50,7 +51,8 @@ class ReliabilityClientTest(unittest.TestCase):
             result = client.flush()
             self.assertEqual(result["accepted"], 3)
             self.assertEqual(len(client.queued()), 0)
-            self.assertEqual(IngestHandler.received[-1]["items"][0]["schema_version"], "1.0")
+            self.assertEqual(IngestHandler.received[-1]["authorization"], "Bearer python-sdk-key")
+            self.assertEqual(IngestHandler.received[-1]["payload"]["items"][0]["schema_version"], "1.0")
         finally:
             server.shutdown()
             thread.join(timeout=5)

@@ -144,7 +144,8 @@ async function main() {
     const result = await generateAutomation(path.resolve(process.cwd(), options.target), {
       outDir: options.out,
       dashboardUrl: options.dashboardUrl,
-      registerDashboard: options.registerDashboard
+      registerDashboard: options.registerDashboard,
+      dashboardApiKey: options.apiKey
     });
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     return;
@@ -153,7 +154,7 @@ async function main() {
   if (command === "push") {
     const options = parsePushArgs(args);
     const target = path.resolve(process.cwd(), options.target);
-    const result = await pushToDashboard(target, options.dashboardUrl);
+    const result = await pushToDashboard(target, options.dashboardUrl, options.apiKey);
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     return;
   }
@@ -223,7 +224,8 @@ function parseAutomationArgs(args) {
     target: undefined,
     out: undefined,
     dashboardUrl: "http://127.0.0.1:8787",
-    registerDashboard: false
+    registerDashboard: false,
+    apiKey: process.env.APR_API_KEY ?? process.env.APR_MASTER_API_KEY
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -236,6 +238,10 @@ function parseAutomationArgs(args) {
       i += 1;
       if (!args[i]) fail("--dashboard-url requires a URL");
       options.dashboardUrl = args[i];
+    } else if (arg === "--api-key" || arg === "--dashboard-api-key") {
+      i += 1;
+      if (!args[i]) fail(`${arg} requires a value`);
+      options.apiKey = args[i];
     } else if (arg === "--register-dashboard") {
       options.registerDashboard = true;
     } else if (arg.startsWith("--")) {
@@ -254,7 +260,8 @@ function parseAutomationArgs(args) {
 function parsePushArgs(args) {
   const options = {
     target: undefined,
-    dashboardUrl: "http://127.0.0.1:8787"
+    dashboardUrl: "http://127.0.0.1:8787",
+    apiKey: process.env.APR_API_KEY ?? process.env.APR_MASTER_API_KEY
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -263,6 +270,10 @@ function parsePushArgs(args) {
       i += 1;
       if (!args[i]) fail("--dashboard-url requires a URL");
       options.dashboardUrl = args[i];
+    } else if (arg === "--api-key" || arg === "--dashboard-api-key") {
+      i += 1;
+      if (!args[i]) fail(`${arg} requires a value`);
+      options.apiKey = args[i];
     } else if (arg.startsWith("--")) {
       fail(`Unknown option: ${arg}`);
     } else if (!options.target) {
@@ -530,7 +541,7 @@ ${report.passportDraft}
 `;
 }
 
-async function pushToDashboard(target, dashboardUrl) {
+async function pushToDashboard(target, dashboardUrl, apiKey) {
   const report = await scanProject(target);
   const { parseProductContract } = await import("../../automation/src/generate.mjs");
   const contractText = await fs.readFile(path.join(target, "product.yml"), "utf8");
@@ -541,7 +552,7 @@ async function pushToDashboard(target, dashboardUrl) {
     product: contract.product,
     environments: contract.environments,
     critical_journeys: contract.critical_journeys
-  });
+  }, apiKey);
   const ingestResponse = await postJson(`${endpoint}/api/ingest`, {
     items: [
       {
@@ -575,7 +586,7 @@ async function pushToDashboard(target, dashboardUrl) {
         }
       }
     ]
-  });
+  }, apiKey);
 
   return {
     product_id: contract.product.id,
@@ -586,14 +597,18 @@ async function pushToDashboard(target, dashboardUrl) {
   };
 }
 
-async function postJson(url, payload) {
+async function postJson(url, payload, apiKey) {
   const response = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {})
+    },
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
-    throw new Error(`POST ${url} failed: ${response.status}`);
+    const text = await response.text().catch(() => "");
+    throw new Error(`POST ${url} failed: ${response.status}${text ? ` ${text}` : ""}`);
   }
   return response.json().catch(() => ({ ok: true }));
 }
@@ -634,8 +649,8 @@ function printHelp() {
 
 Usage:
   node cli/src/index.mjs scan <project-path> [--json] [--out <file>] [--write-passport]
-  node cli/src/index.mjs automate <project-path> [--out <dir>] [--dashboard-url <url>] [--register-dashboard]
-  node cli/src/index.mjs push <project-path> [--dashboard-url <url>]
+  node cli/src/index.mjs automate <project-path> [--out <dir>] [--dashboard-url <url>] [--api-key <key>] [--register-dashboard]
+  node cli/src/index.mjs push <project-path> [--dashboard-url <url>] [--api-key <key>]
 
 Commands:
   scan              Scan a project for MVP reliability controls.
@@ -645,6 +660,7 @@ Commands:
 Options:
   --json            Output JSON instead of Markdown.
   --out <file>      Write output to a file.
+  --api-key <key>   Dashboard API key. Defaults to APR_API_KEY or APR_MASTER_API_KEY.
   --write-passport  Write docs/system-passport.generated.md into the scanned project.
 `);
 }

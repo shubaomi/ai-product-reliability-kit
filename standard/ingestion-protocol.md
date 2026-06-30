@@ -8,6 +8,7 @@ Default local collector endpoint:
 
 ```text
 POST /api/ingest
+Authorization: Bearer <ingest-api-key>
 ```
 
 SDKs may also post to specific endpoints:
@@ -52,10 +53,16 @@ POST /api/releases
 | `health` | Liveness/readiness result and dependency checks. |
 | `release` | Deployment version, timestamp, and notes. |
 
+Required payload fields:
+
+- `event`: `payload.event`
+- `error`: `payload.name`, `payload.message`
+- `health`: `payload.ok`
+- `release`: `payload.version`
+
 ## Compatibility
 
 - `schema_version: "1.0"` is stable for stage 2-4.
 - Add optional fields instead of changing field meanings.
 - Collectors must ignore unknown fields.
 - SDKs must not send secrets, payment card data, raw private documents, or credentials.
-

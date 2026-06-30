@@ -2,19 +2,19 @@
 
 Reusable standards, SDKs, dashboard, automation, templates, a Codex skill, and a CLI for making AI-built products easier to understand, monitor, debug, and safely evolve.
 
-This repository now includes the staged implementation path: audit kit, SDKs, local dashboard, and provider-neutral operations automation.
+The repository includes a production-ready v1 dashboard path: Postgres persistence, API key authentication, reliable ingestion validation, scheduled monitors, alert delivery hooks, public status pages, AI incident packages, Docker Compose deployment, and multi-language SDKs.
 
 ## What Is Included
 
 - `standard/` - Core reliability standard, product contract schema, event, health, and release compatibility guidance.
 - `cli/` - Dependency-light Node.js CLI that scans a project and reports missing reliability controls.
 - `sdks/` - Lightweight Node, Python, and Java clients for the ingestion protocol.
-- `apps/dashboard/` - Local central dashboard and collector API.
+- `apps/dashboard/` - Central dashboard, collector API, Postgres store, scheduler, status pages, and incident packages.
 - `automation/` - Monitor, alert, status page, and AI incident package generator.
 - `skill/ai-product-reliability/` - Codex skill for auditing or improving projects with this standard.
 - `templates/` - Product contract, documentation, CI, and smoke test templates.
 - `examples/node-nextjs/` - Minimal example project that follows the MVP standard.
-- `docs/` - Architecture and roadmap for later SDK/dashboard phases.
+- `docs/` - Architecture, production deployment, dashboard, SDK, automation, and roadmap notes.
 
 ## Quick Start
 
@@ -46,6 +46,24 @@ Register those generated operations artifacts with the running dashboard:
 ```bash
 node cli/src/index.mjs automate examples/node-nextjs --out .tmp/automation-example --register-dashboard
 ```
+
+## Production Deployment
+
+Prepare `.env`, generate secrets, and run the Postgres-backed platform:
+
+```bash
+cp .env.example .env
+npm --prefix apps/dashboard run hash-password -- "replace-with-a-strong-password"
+docker compose up -d --build
+```
+
+Use `APR_MASTER_API_KEY` for admin CLI operations and `APR_INGEST_API_KEY` in product SDKs:
+
+```bash
+node cli/src/index.mjs push examples/node-nextjs --dashboard-url http://localhost:8787 --api-key replace-with-master-key
+```
+
+See `docs/production.md` for the full production setup.
 
 Write a system passport draft into a target project:
 
@@ -79,11 +97,12 @@ A scanned project should produce:
 - Prioritized adoption plan.
 - System passport draft.
 
-## Stage 2-4 Success Criteria
+## Runtime Success Criteria
 
 - SDKs send product, event, error, health, and release envelopes to `/api/ingest`.
-- Dashboard shows registered products, health, events, errors, monitors, and alerts.
+- Dashboard shows registered products, health, events, errors, monitors, alerts, and public status pages.
 - Automation generates provider-neutral monitor definitions, alert rules, status page draft, and AI incident package from `product.yml`.
+- Production deployments use Postgres, authentication, API keys, scheduler execution, alert delivery records, and Docker Compose.
 
 ## Adoption Model
 

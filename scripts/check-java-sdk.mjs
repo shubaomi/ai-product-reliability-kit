@@ -10,7 +10,8 @@ for (const snippet of [
   "public String health(",
   "public String flush()",
   "\\\"schema_version\\\":\\\"1.0\\\"",
-  "/api/ingest"
+  "/api/ingest",
+  "Bearer "
 ]) {
   assert.match(source, new RegExp(escapeRegExp(snippet)));
 }

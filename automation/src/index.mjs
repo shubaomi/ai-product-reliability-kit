@@ -21,7 +21,9 @@ async function main() {
 }
 
 function parseArgs(args) {
-  const options = {};
+  const options = {
+    dashboardApiKey: process.env.APR_API_KEY ?? process.env.APR_MASTER_API_KEY
+  };
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     if (arg === "--out") {
@@ -32,6 +34,10 @@ function parseArgs(args) {
       i += 1;
       if (!args[i]) fail("--dashboard-url requires a URL");
       options.dashboardUrl = args[i];
+    } else if (arg === "--api-key" || arg === "--dashboard-api-key") {
+      i += 1;
+      if (!args[i]) fail(`${arg} requires a value`);
+      options.dashboardApiKey = args[i];
     } else if (arg === "--register-dashboard") {
       options.registerDashboard = true;
     } else {
@@ -45,7 +51,7 @@ function printHelp() {
   process.stdout.write(`AI Product Reliability Automation
 
 Usage:
-  node automation/src/index.mjs generate <project-path> [--out <dir>] [--dashboard-url <url>] [--register-dashboard]
+  node automation/src/index.mjs generate <project-path> [--out <dir>] [--dashboard-url <url>] [--api-key <key>] [--register-dashboard]
 
 Generates:
   monitors.json

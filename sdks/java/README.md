@@ -15,11 +15,11 @@ ReliabilityClient client = new ReliabilityClient(
     "invoice-ai",
     "production",
     "git:abc1234",
-    "http://127.0.0.1:8787"
+    "https://reliability.example.com",
+    System.getenv("APR_INGEST_API_KEY")
 );
 
 client.event("invoice_created", Map.of("plan", "pro"));
 client.health(Map.of("database", true));
 client.flush();
 ```
-

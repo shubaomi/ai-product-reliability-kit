@@ -1,9 +1,15 @@
+const loginPanel = document.getElementById("login-panel");
+const dashboardPanel = document.getElementById("dashboard-panel");
+const loginForm = document.getElementById("login-form");
+const loginError = document.getElementById("login-error");
+
 async function loadDashboard() {
   const [summary, products] = await Promise.all([
-    fetch("/api/summary").then((response) => response.json()),
-    fetch("/api/products").then((response) => response.json())
+    apiJson("/api/summary"),
+    apiJson("/api/products")
   ]);
 
+  showDashboard();
   setText("product-count", summary.products);
   setText("event-count", summary.events);
   setText("error-count", summary.errors);
@@ -17,6 +23,24 @@ async function loadDashboard() {
   renderHealth(summary.latest_health);
   renderTimeline("events", summary.recent_events, "event");
   renderTimeline("errors", summary.recent_errors, "error");
+}
+
+async function apiJson(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "same-origin",
+    ...options,
+    headers: {
+      ...(options.body ? { "content-type": "application/json" } : {}),
+      ...(options.headers ?? {})
+    }
+  });
+  if (response.status === 401) {
+    const error = new Error("Authentication required");
+    error.status = 401;
+    throw error;
+  }
+  if (!response.ok) throw new Error(`${url} returned ${response.status}`);
+  return response.json();
 }
 
 function renderProducts(products, summary) {
@@ -56,7 +80,7 @@ function renderHealth(latestHealth) {
     target.insertAdjacentHTML("beforeend", `
       <div class="row-item ${ok ? "good" : "bad"}">
         <strong>${escapeHtml(item.product_id)}</strong>
-        <div class="meta">${ok ? "healthy" : "failing"} · ${escapeHtml(item.occurred_at)}</div>
+        <div class="meta">${ok ? "healthy" : "failing"} / ${escapeHtml(item.occurred_at)}</div>
       </div>
     `);
   }
@@ -74,10 +98,22 @@ function renderTimeline(id, items, type) {
     target.insertAdjacentHTML("beforeend", `
       <div class="row-item ${type === "error" ? "bad" : ""}">
         <strong>${escapeHtml(title ?? "unknown")}</strong>
-        <div class="meta">${escapeHtml(item.product_id)} · ${escapeHtml(item.release)} · ${escapeHtml(item.occurred_at)}</div>
+        <div class="meta">${escapeHtml(item.product_id)} / ${escapeHtml(item.release)} / ${escapeHtml(item.occurred_at)}</div>
       </div>
     `);
   }
+}
+
+function showDashboard() {
+  loginPanel.hidden = true;
+  dashboardPanel.hidden = false;
+  loginError.textContent = "";
+}
+
+function showLogin() {
+  loginPanel.hidden = false;
+  dashboardPanel.hidden = true;
+  document.getElementById("login-email").focus();
 }
 
 function setText(id, value) {
@@ -94,9 +130,35 @@ function escapeHtml(value) {
   })[char]);
 }
 
-document.getElementById("refresh").addEventListener("click", loadDashboard);
-loadDashboard().catch((error) => {
-  console.error(error);
-  document.getElementById("fleet-status").textContent = "Error";
+document.getElementById("refresh").addEventListener("click", () => {
+  loadDashboard().catch(handleLoadError);
 });
 
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  loginError.textContent = "";
+  const body = {
+    email: document.getElementById("login-email").value,
+    password: document.getElementById("login-password").value
+  };
+  try {
+    await apiJson("/api/session/login", {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
+    await loadDashboard();
+  } catch (error) {
+    loginError.textContent = error.status === 401 ? "Invalid email or password." : "Sign in failed.";
+  }
+});
+
+function handleLoadError(error) {
+  if (error.status === 401) {
+    showLogin();
+    return;
+  }
+  console.error(error);
+  document.getElementById("fleet-status").textContent = "Error";
+}
+
+loadDashboard().catch(handleLoadError);

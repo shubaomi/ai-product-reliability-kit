@@ -21,15 +21,27 @@
 - Product inventory from `product.yml`. Done.
 - Error, event, release, and health aggregation. Done.
 - Multi-product operational dashboard. Done.
-- Status page and alert routing integrations. Provider adapters next.
+- Postgres production store. Done.
+- Authenticated dashboard and API keys. Done.
+- Status page and alert routing hooks. Done.
+- Provider-specific alert adapters. Next.
 
 ## Stage 4: AI-Assisted Operations
 
 - One-command incident package. Done.
 - Provider-neutral monitor and alert generation. Done.
 - Status page draft generation. Done.
+- Scheduler worker and alert delivery records. Done.
 - Release regression analysis. Next.
 - Codex plugin integration for dashboard-aware debugging. Next.
+
+## Production v1
+
+- Docker Compose deployment with Postgres. Done.
+- Migration runner and password hash tooling. Done.
+- Public status page and machine-readable status API. Done.
+- Authenticated CLI push and automation registration. Done.
+- Cross-language SDK API key support. Done.
 
 ## Upgrade Policy
 

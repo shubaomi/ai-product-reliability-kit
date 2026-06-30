@@ -13,7 +13,16 @@ const repoRoot = path.resolve(__dirname, "../../..");
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "apr-automation-register-"));
 const storePath = path.join(tempDir, "store.json");
 const outDir = path.join(tempDir, "generated");
-const server = await createDashboardServer({ storePath });
+const apiKey = "automation-register-master-key";
+const server = await createDashboardServer({
+  storePath,
+  config: {
+    authRequired: true,
+    masterApiKey: apiKey,
+    sessionSecret: "automation-register-session-secret",
+    workerEnabled: false
+  }
+});
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const { port } = server.address();
 const base = `http://127.0.0.1:${port}`;
@@ -27,6 +36,8 @@ try {
     outDir,
     "--dashboard-url",
     base,
+    "--api-key",
+    apiKey,
     "--register-dashboard"
   ], { cwd: repoRoot });
 
@@ -35,7 +46,9 @@ try {
   assert.equal(result.dashboardRegistrations.alerts.accepted, 3);
   assert.equal(result.dashboardRegistrations.status_page.accepted, 1);
 
-  const summary = await fetch(`${base}/api/summary`).then((response) => response.json());
+  const summary = await fetch(`${base}/api/summary`, {
+    headers: { authorization: `Bearer ${apiKey}` }
+  }).then((response) => response.json());
   assert.equal(summary.monitors, 5);
   assert.equal(summary.alerts, 3);
 } finally {
@@ -44,4 +57,3 @@ try {
 }
 
 console.log("Automation dashboard registration test OK");
-

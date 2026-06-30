@@ -5,9 +5,14 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node test/dashboard.test.mjs && node test/cli-push.test.mjs && node test/automation-register.test.mjs"
+    "migrate": "node scripts/migrate.mjs",
+    "hash-password": "node scripts/hash-password.mjs",
+    "test": "node test/dashboard.test.mjs && node test/cli-push.test.mjs && node test/automation-register.test.mjs && node test/security.test.mjs && node test/scheduler.test.mjs && node test/incident.test.mjs && node test/postgres-schema.test.mjs"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "pg": "^8.22.0"
   }
 }

@@ -17,10 +17,15 @@ public final class ReliabilityClient {
     private final String environment;
     private final String release;
     private final String endpoint;
+    private final String apiKey;
     private final HttpClient httpClient;
     private final List<String> queue = new ArrayList<>();
 
     public ReliabilityClient(String productId, String environment, String release, String endpoint) {
+        this(productId, environment, release, endpoint, null);
+    }
+
+    public ReliabilityClient(String productId, String environment, String release, String endpoint, String apiKey) {
         if (productId == null || productId.isBlank()) throw new IllegalArgumentException("productId is required");
         if (environment == null || environment.isBlank()) throw new IllegalArgumentException("environment is required");
         if (release == null || release.isBlank()) throw new IllegalArgumentException("release is required");
@@ -28,6 +33,7 @@ public final class ReliabilityClient {
         this.environment = environment;
         this.release = release;
         this.endpoint = trimTrailingSlash(endpoint == null || endpoint.isBlank() ? "http://127.0.0.1:8787" : endpoint);
+        this.apiKey = apiKey;
         this.httpClient = HttpClient.newHttpClient();
     }
 
@@ -61,10 +67,13 @@ public final class ReliabilityClient {
     public String flush() throws IOException, InterruptedException {
         if (queue.isEmpty()) return "{\"sent\":0}";
         String body = "{\"items\":[" + String.join(",", queue) + "]}";
-        HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint + "/api/ingest"))
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(endpoint + "/api/ingest"))
             .header("content-type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(body))
-            .build();
+            .POST(HttpRequest.BodyPublishers.ofString(body));
+        if (apiKey != null && !apiKey.isBlank()) {
+            builder.header("authorization", "Bearer " + apiKey);
+        }
+        HttpRequest request = builder.build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IOException("Reliability ingest failed: " + response.statusCode());
@@ -109,4 +118,3 @@ public final class ReliabilityClient {
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 }
-

@@ -5,6 +5,9 @@ build/
 coverage/
 .DS_Store
 *.log
+.env
+.env.*
+!.env.example
 __pycache__/
 *.pyc
 apps/dashboard/data/*.json

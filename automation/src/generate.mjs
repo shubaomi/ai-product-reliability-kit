@@ -31,8 +31,9 @@ export async function generateAutomation(projectPath, options = {}) {
     await fs.writeFile(path.join(outDir, name), contents, "utf8");
   }
 
+  const dashboardApiKey = options.dashboardApiKey ?? options.apiKey;
   const dashboardRegistrations = options.registerDashboard
-    ? await registerDashboardArtifacts(dashboardUrl, contract, monitors, alerts, statusPage)
+    ? await registerDashboardArtifacts(dashboardUrl, contract, monitors, alerts, statusPage, dashboardApiKey)
     : null;
 
   return {
@@ -55,6 +56,7 @@ export function buildMonitors(contract, dashboardUrl) {
   if (baseUrl) {
     monitors.push({
       id: `${contract.product.id}-healthz`,
+      product_id: contract.product.id,
       type: "http",
       name: `${contract.product.name} liveness`,
       url: `${baseUrl}${livePath}`,
@@ -64,6 +66,7 @@ export function buildMonitors(contract, dashboardUrl) {
     });
     monitors.push({
       id: `${contract.product.id}-readyz`,
+      product_id: contract.product.id,
       type: "http",
       name: `${contract.product.name} readiness`,
       url: `${baseUrl}${readyPath}`,
@@ -76,6 +79,7 @@ export function buildMonitors(contract, dashboardUrl) {
   for (const journey of contract.critical_journeys) {
     monitors.push({
       id: `${contract.product.id}-${journey.id}-journey`,
+      product_id: contract.product.id,
       type: "event-freshness",
       name: `${journey.name} success event freshness`,
       event: journey.success_event,
@@ -87,6 +91,7 @@ export function buildMonitors(contract, dashboardUrl) {
 
   monitors.push({
     id: `${contract.product.id}-dashboard-ingest`,
+    product_id: contract.product.id,
     type: "collector",
     name: "Dashboard ingestion endpoint",
     url: `${dashboardUrl.replace(/\/$/, "")}/api/ingest`,
@@ -101,6 +106,7 @@ export function buildAlerts(contract) {
   return [
     {
       id: `${contract.product.id}-health-down`,
+      product_id: contract.product.id,
       name: "Health check failing",
       condition: "http_monitor_failed >= 2 consecutive checks",
       severity: "critical",
@@ -109,6 +115,7 @@ export function buildAlerts(contract) {
     },
     {
       id: `${contract.product.id}-error-spike`,
+      product_id: contract.product.id,
       name: "Release error spike",
       condition: "errors_current_release > errors_previous_release * 2 and errors_current_release >= 5",
       severity: "high",
@@ -117,6 +124,7 @@ export function buildAlerts(contract) {
     },
     {
       id: `${contract.product.id}-journey-drop`,
+      product_id: contract.product.id,
       name: "Critical journey event drop",
       condition: "success_event_count drops by 30 percent in 60 minutes",
       severity: "high",
@@ -189,16 +197,16 @@ Use the files in this package plus the latest logs, events, errors, and release 
 `;
 }
 
-async function registerDashboardArtifacts(dashboardUrl, contract, monitors, alerts, statusPage) {
+async function registerDashboardArtifacts(dashboardUrl, contract, monitors, alerts, statusPage, apiKey) {
   const endpoint = dashboardUrl.replace(/\/$/, "");
-  const monitorResult = await postJson(`${endpoint}/api/monitors`, { items: monitors });
-  const alertResult = await postJson(`${endpoint}/api/alerts`, { items: alerts });
+  const monitorResult = await postJson(`${endpoint}/api/monitors`, { items: monitors }, apiKey);
+  const alertResult = await postJson(`${endpoint}/api/alerts`, { items: alerts }, apiKey);
   const statusResult = await postJson(`${endpoint}/api/status-pages`, {
     product_id: contract.product.id,
     title: `${contract.product.name} Status Page`,
     body: statusPage,
     generated_at: new Date().toISOString()
-  });
+  }, apiKey);
   return {
     monitors: monitorResult,
     alerts: alertResult,
@@ -206,14 +214,18 @@ async function registerDashboardArtifacts(dashboardUrl, contract, monitors, aler
   };
 }
 
-async function postJson(url, payload) {
+async function postJson(url, payload, apiKey) {
   const response = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {})
+    },
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
-    throw new Error(`POST ${url} failed: ${response.status}`);
+    const text = await response.text().catch(() => "");
+    throw new Error(`POST ${url} failed: ${response.status}${text ? ` ${text}` : ""}`);
   }
   return response.json().catch(() => ({ ok: true }));
 }

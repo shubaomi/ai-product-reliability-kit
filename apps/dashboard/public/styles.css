@@ -74,10 +74,16 @@ h2 {
 
 .status-pill,
 button,
-.tag {
+.tag,
+input {
   border: 1px solid var(--ink);
   background: var(--panel);
   color: var(--ink);
+}
+
+.status-pill,
+button,
+.tag {
   font-weight: 700;
 }
 
@@ -99,6 +105,49 @@ button {
   min-height: 36px;
   padding: 0 12px;
   cursor: pointer;
+}
+
+input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  font: inherit;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.login-panel {
+  max-width: 460px;
+  margin: 12vh auto 0;
+}
+
+.login-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.login-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.login-form button {
+  width: 100%;
+  min-height: 42px;
+}
+
+.form-error {
+  min-height: 18px;
+  margin: 0;
+  color: var(--bad);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .metrics {
@@ -136,6 +185,10 @@ button {
 .panel {
   min-width: 0;
   padding: 16px;
+}
+
+.status-body {
+  margin-top: 22px;
 }
 
 .span-7 {
@@ -218,4 +271,3 @@ th {
     grid-column: span 1;
   }
 }
-

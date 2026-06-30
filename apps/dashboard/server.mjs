@@ -4,160 +4,158 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { loadConfig } from "./src/config.mjs";
+import { createSecurity } from "./src/security.mjs";
+import { validateIngestBody, normalizeProduct, httpError } from "./src/validation.mjs";
+import { createStore } from "./src/stores/index.mjs";
+import { startScheduler, runSchedulerOnce } from "./src/scheduler.mjs";
+import { buildIncidentPackage } from "./src/incident.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
-const defaultStorePath = path.join(__dirname, "data", "store.json");
-
-const initialStore = {
-  products: [],
-  events: [],
-  errors: [],
-  health: [],
-  releases: [],
-  monitors: [],
-  alerts: [],
-  statusPages: []
-};
 
 export async function createDashboardServer(options = {}) {
-  const storePath = options.storePath ?? process.env.APR_DASHBOARD_STORE ?? defaultStorePath;
-  await ensureStore(storePath);
+  const config = { ...loadConfig(options.env ?? process.env), ...options.config };
+  const store = await createStore(config, options);
+  const security = createSecurity(config);
 
-  return http.createServer(async (request, response) => {
+  const server = http.createServer(async (request, response) => {
     try {
-      await route(request, response, storePath);
+      await route({ request, response, store, config, security });
     } catch (error) {
-      sendJson(response, 500, { error: error.message });
+      sendJson(response, error.status ?? 500, { error: error.status ? error.message : "Internal server error" }, security.securityHeaders);
+      if (!error.status) console.error(error);
     }
   });
+
+  server.store = store;
+  server.stopWorker = config.workerEnabled ? startScheduler(store, config) : null;
+  server.on("close", () => {
+    server.stopWorker?.();
+    store.close?.();
+  });
+  return server;
 }
 
-async function route(request, response, storePath) {
+async function route(ctx) {
+  const { request, response, store, config, security } = ctx;
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
 
-  if (request.method === "GET" && url.pathname === "/api/summary") {
-    return sendJson(response, 200, summarize(await readStore(storePath)));
+  applyCors(request, response, config);
+  if (request.method === "OPTIONS") {
+    response.writeHead(204, security.securityHeaders);
+    response.end();
+    return;
   }
-  if (request.method === "GET" && url.pathname === "/api/products") {
-    return sendJson(response, 200, (await readStore(storePath)).products);
+
+  const rate = security.checkRateLimit(request);
+  if (!rate.ok) throw httpError(429, "Too many requests");
+
+  const auth = await security.authenticate(request, url, store);
+  if (!auth.ok) throw httpError(auth.status, auth.error);
+  ctx.principal = auth.principal;
+
+  if (request.method === "POST" && url.pathname === "/api/session/login") {
+    const session = await security.login(await readJsonBody(request, config));
+    if (!session) throw httpError(401, "Invalid credentials");
+    response.setHeader("set-cookie", `${security.SESSION_COOKIE}=${session}; ${cookieAttributes(config)}`);
+    return sendJson(response, 200, { ok: true }, security.securityHeaders);
   }
-  if (request.method === "GET" && url.pathname === "/api/events") {
-    return sendJson(response, 200, (await readStore(storePath)).events.slice(-200).reverse());
-  }
-  if (request.method === "GET" && url.pathname === "/api/errors") {
-    return sendJson(response, 200, (await readStore(storePath)).errors.slice(-200).reverse());
-  }
-  if (request.method === "GET" && url.pathname === "/api/health") {
-    return sendJson(response, 200, latestByProduct((await readStore(storePath)).health));
-  }
-  if (request.method === "GET" && url.pathname === "/api/status") {
-    return sendJson(response, 200, statusModel(await readStore(storePath)));
-  }
+
+  if (request.method === "GET" && url.pathname === "/api/summary") return sendJson(response, 200, await store.summarize(), security.securityHeaders);
+  if (request.method === "GET" && url.pathname === "/api/products") return sendJson(response, 200, await store.listProducts(), security.securityHeaders);
+  if (request.method === "GET" && url.pathname === "/api/events") return sendJson(response, 200, await store.listEvents(), security.securityHeaders);
+  if (request.method === "GET" && url.pathname === "/api/errors") return sendJson(response, 200, await store.listErrors(), security.securityHeaders);
+  if (request.method === "GET" && url.pathname === "/api/health") return sendJson(response, 200, await store.latestHealthByProduct(), security.securityHeaders);
+  if (request.method === "GET" && url.pathname === "/api/status") return sendJson(response, 200, await statusModel(store), security.securityHeaders);
+  if (request.method === "GET" && url.pathname.startsWith("/api/incident-packages/")) return incidentPackageResponse(response, store, decodeURIComponent(url.pathname.split("/").pop()), url, security.securityHeaders);
+
   if (request.method === "POST" && url.pathname === "/api/ingest") {
-    const body = await readJsonBody(request);
-    const items = Array.isArray(body.items) ? body.items : [body];
-    const store = await readStore(storePath);
-    for (const item of items) appendIngestItem(store, item);
-    await writeStore(storePath, store);
-    return sendJson(response, 200, { accepted: items.length });
+    ensureScope(security, ctx.principal, "ingest");
+    const items = validateIngestBody(await readJsonBody(request, config), config);
+    await ensureProductsForTelemetry(store, items);
+    return sendJson(response, 200, await store.appendIngestItems(items), security.securityHeaders);
   }
   if (request.method === "POST" && url.pathname === "/api/products") {
-    const body = await readJsonBody(request);
-    const store = await readStore(storePath);
-    upsertProduct(store, normalizeProduct(body));
-    await writeStore(storePath, store);
-    return sendJson(response, 200, { ok: true });
+    ensureScope(security, ctx.principal, "ingest");
+    const body = normalizeProduct(await readJsonBody(request, config));
+    return sendJson(response, 200, { ok: true, product: await store.upsertProduct(body) }, security.securityHeaders);
   }
   if (request.method === "POST" && url.pathname === "/api/monitors") {
-    return appendCollection(request, response, storePath, "monitors");
+    ensureScope(security, ctx.principal, "admin");
+    const values = await itemArrayBody(request, config);
+    return sendJson(response, 200, await store.appendMonitors(values), security.securityHeaders);
   }
   if (request.method === "POST" && url.pathname === "/api/alerts") {
-    return appendCollection(request, response, storePath, "alerts");
+    ensureScope(security, ctx.principal, "admin");
+    const values = await itemArrayBody(request, config);
+    return sendJson(response, 200, await store.appendAlerts(values), security.securityHeaders);
   }
   if (request.method === "POST" && url.pathname === "/api/status-pages") {
-    return appendCollection(request, response, storePath, "statusPages");
+    ensureScope(security, ctx.principal, "admin");
+    const values = await itemArrayBody(request, config);
+    return sendJson(response, 200, await store.appendStatusPages(values.map((page) => ({ public_slug: page.public_slug ?? page.product_id, ...page }))), security.securityHeaders);
+  }
+  if (request.method === "POST" && url.pathname === "/api/scheduler/run-once") {
+    ensureScope(security, ctx.principal, "admin");
+    return sendJson(response, 200, await runSchedulerOnce(store, config), security.securityHeaders);
+  }
+  if (request.method === "POST" && url.pathname.startsWith("/api/incident-packages/")) {
+    ensureScope(security, ctx.principal, "admin");
+    const productId = decodeURIComponent(url.pathname.split("/").pop());
+    const incident = await buildIncidentPackage(store, productId);
+    return sendJson(response, 200, await store.createIncident(incident), security.securityHeaders);
   }
 
-  if (request.method === "GET") {
-    return serveStatic(response, url.pathname);
-  }
+  if (request.method === "GET" && url.pathname.startsWith("/status")) return serveStatusPage(response, store, url, security.securityHeaders);
+  if (request.method === "GET") return serveStatic(response, url.pathname, security.securityHeaders);
 
-  sendJson(response, 405, { error: "Method not allowed" });
+  throw httpError(405, "Method not allowed");
 }
 
-async function appendCollection(request, response, storePath, key) {
-  const body = await readJsonBody(request);
-  const values = Array.isArray(body.items) ? body.items : [body];
-  const store = await readStore(storePath);
-  store[key].push(...values);
-  await writeStore(storePath, store);
-  sendJson(response, 200, { accepted: values.length });
-}
-
-function appendIngestItem(store, item) {
-  if (!item?.type) return;
-  if (item.type === "product") {
-    upsertProduct(store, normalizeProduct(item.payload?.contract ?? item.payload ?? item));
-  } else if (item.type === "event") {
-    store.events.push(item);
-  } else if (item.type === "error") {
-    store.errors.push(item);
-  } else if (item.type === "health") {
-    store.health.push(item);
-  } else if (item.type === "release") {
-    store.releases.push(item);
+async function ensureProductsForTelemetry(store, items) {
+  for (const item of items) {
+    if (item.type === "product") continue;
+    if (!(await store.getProduct(item.product_id))) {
+      await store.upsertProduct({
+        product_id: item.product_id,
+        name: item.product_id,
+        owner: "unknown",
+        standard_version: "unknown",
+        environments: [],
+        critical_journeys: [],
+        contract: {}
+      });
+    }
   }
 }
 
-function normalizeProduct(input) {
-  const contract = input?.contract ?? input;
-  const product = contract?.product ?? contract;
-  return {
-    product_id: product?.id ?? input?.product_id ?? "unknown-product",
-    name: product?.name ?? input?.name ?? product?.id ?? "Unknown Product",
-    owner: product?.owner ?? input?.owner ?? "unknown",
-    standard_version: contract?.standard_version ?? input?.standard_version ?? "unknown",
-    environments: contract?.environments ?? input?.environments ?? [],
-    critical_journeys: contract?.critical_journeys ?? input?.critical_journeys ?? [],
-    updated_at: new Date().toISOString()
-  };
+function ensureScope(security, principal, scope) {
+  if (!security.authorize(principal, scope)) throw httpError(403, "Forbidden");
 }
 
-function upsertProduct(store, product) {
-  const index = store.products.findIndex((item) => item.product_id === product.product_id);
-  if (index >= 0) store.products[index] = { ...store.products[index], ...product };
-  else store.products.push(product);
+async function itemArrayBody(request, config) {
+  const body = await readJsonBody(request, config);
+  return Array.isArray(body.items) ? body.items : [body];
 }
 
-function summarize(store) {
-  const latestHealth = latestByProduct(store.health);
-  const failingProducts = Object.values(latestHealth).filter((item) => item.payload?.ok === false).length;
-  const eventsByProduct = countBy(store.events, "product_id");
-  const errorsByProduct = countBy(store.errors, "product_id");
-  return {
-    products: store.products.length,
-    events: store.events.length,
-    errors: store.errors.length,
-    releases: store.releases.length,
-    monitors: store.monitors.length,
-    alerts: store.alerts.length,
-    failing_products: failingProducts,
-    latest_health: latestHealth,
-    events_by_product: eventsByProduct,
-    errors_by_product: errorsByProduct,
-    recent_events: store.events.slice(-20).reverse(),
-    recent_errors: store.errors.slice(-20).reverse(),
-    status: failingProducts ? "degraded" : "operational"
-  };
+async function incidentPackageResponse(response, store, productId, url, headers) {
+  const incident = await buildIncidentPackage(store, productId);
+  if (url.searchParams.get("format") === "md") {
+    response.writeHead(200, { ...headers, "content-type": "text/markdown; charset=utf-8" });
+    response.end(incident.package_markdown);
+    return;
+  }
+  sendJson(response, 200, incident, headers);
 }
 
-function statusModel(store) {
-  const summary = summarize(store);
+async function statusModel(store) {
+  const products = await store.listProducts();
+  const summary = await store.summarize();
   return {
     status: summary.status,
     generated_at: new Date().toISOString(),
-    products: store.products.map((product) => ({
+    products: products.map((product) => ({
       product_id: product.product_id,
       name: product.name,
       status: summary.latest_health[product.product_id]?.payload?.ok === false ? "degraded" : "operational"
@@ -165,63 +163,65 @@ function statusModel(store) {
   };
 }
 
-function latestByProduct(items) {
-  const latest = {};
-  for (const item of items) latest[item.product_id] = item;
-  return latest;
+async function serveStatusPage(response, store, url, headers) {
+  const slug = url.pathname === "/status" ? null : decodeURIComponent(url.pathname.replace(/^\/status\/?/, ""));
+  const status = await statusModel(store);
+  const page = slug ? await store.getStatusPage(slug) : null;
+  const title = page?.title ?? "System Status";
+  const body = page?.body ? markdownToHtml(page.body) : status.products.map((product) => `<li>${escapeHtml(product.name)}: ${escapeHtml(product.status)}</li>`).join("");
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)}</title><link rel="stylesheet" href="/styles.css"></head><body><main class="shell"><header class="topbar"><div><p class="eyebrow">Public Status</p><h1>${escapeHtml(title)}</h1></div><div class="status-pill ${status.status}">${escapeHtml(status.status)}</div></header><section class="panel status-body">${body}</section></main></body></html>`;
+  response.writeHead(200, { ...headers, "content-type": "text/html; charset=utf-8" });
+  response.end(html);
 }
 
-function countBy(items, key) {
-  return items.reduce((acc, item) => {
-    const value = item[key] ?? "unknown";
-    acc[value] = (acc[value] ?? 0) + 1;
-    return acc;
-  }, {});
-}
-
-async function ensureStore(storePath) {
-  await fs.mkdir(path.dirname(storePath), { recursive: true });
-  try {
-    await fs.access(storePath);
-  } catch {
-    await writeStore(storePath, initialStore);
-  }
-}
-
-async function readStore(storePath) {
-  const text = await fs.readFile(storePath, "utf8");
-  return { ...initialStore, ...JSON.parse(text) };
-}
-
-async function writeStore(storePath, store) {
-  await fs.mkdir(path.dirname(storePath), { recursive: true });
-  await fs.writeFile(storePath, JSON.stringify(store, null, 2), "utf8");
-}
-
-async function readJsonBody(request) {
+async function readJsonBody(request, config) {
+  let size = 0;
   let body = "";
-  for await (const chunk of request) body += chunk;
+  for await (const chunk of request) {
+    size += chunk.length;
+    if (size > config.maxBodyBytes) throw httpError(413, "Request body too large");
+    body += chunk;
+  }
   return body ? JSON.parse(body) : {};
 }
 
-async function serveStatic(response, urlPath) {
+async function serveStatic(response, urlPath, headers) {
   const filePath = urlPath === "/" ? path.join(publicDir, "index.html") : path.join(publicDir, urlPath);
   const resolved = path.resolve(filePath);
-  if (!resolved.startsWith(publicDir)) {
-    return sendJson(response, 403, { error: "Forbidden" });
-  }
+  if (!resolved.startsWith(publicDir)) throw httpError(403, "Forbidden");
   try {
     const data = await fs.readFile(resolved);
-    response.writeHead(200, { "content-type": contentType(resolved) });
+    response.writeHead(200, { ...headers, "content-type": contentType(resolved) });
     response.end(data);
   } catch {
-    sendJson(response, 404, { error: "Not found" });
+    throw httpError(404, "Not found");
   }
 }
 
-function sendJson(response, status, payload) {
-  response.writeHead(status, { "content-type": "application/json" });
+function sendJson(response, status, payload, headers = {}) {
+  response.writeHead(status, { ...headers, "content-type": "application/json" });
   response.end(JSON.stringify(payload));
+}
+
+function cookieAttributes(config) {
+  return [
+    "HttpOnly",
+    "SameSite=Lax",
+    "Path=/",
+    "Max-Age=28800",
+    config.nodeEnv === "production" ? "Secure" : null
+  ].filter(Boolean).join("; ");
+}
+
+function applyCors(request, response, config) {
+  const origin = request.headers.origin;
+  if (!origin) return;
+  if (config.corsOrigins.includes(origin)) {
+    response.setHeader("access-control-allow-origin", origin);
+    response.setHeader("vary", "origin");
+    response.setHeader("access-control-allow-headers", "content-type, authorization, x-apr-api-key");
+    response.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
+  }
 }
 
 function contentType(filePath) {
@@ -231,11 +231,28 @@ function contentType(filePath) {
   return "application/octet-stream";
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const port = Number(process.env.PORT ?? 8787);
-  const server = await createDashboardServer();
-  server.listen(port, "127.0.0.1", () => {
-    console.log(`AI Product Reliability Dashboard: http://127.0.0.1:${port}`);
-  });
+function markdownToHtml(markdown) {
+  return escapeHtml(markdown)
+    .replace(/^# (.+)$/gm, "<h2>$1</h2>")
+    .replace(/^## (.+)$/gm, "<h3>$1</h3>")
+    .replace(/^- (.+)$/gm, "<li>$1</li>")
+    .replace(/\n/g, "<br>");
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const config = loadConfig();
+  const server = await createDashboardServer({ config });
+  server.listen(config.port, config.host, () => {
+    console.log(`AI Product Reliability Dashboard: http://${config.host}:${config.port}`);
+  });
+}
