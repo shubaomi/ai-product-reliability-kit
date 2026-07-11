@@ -20,6 +20,7 @@ const server = await createDashboardServer({
     authRequired: true,
     masterApiKey: apiKey,
     sessionSecret: "automation-register-session-secret",
+    allowedMonitorHosts: ["127.0.0.1", "example.com"],
     workerEnabled: false
   }
 });
@@ -42,15 +43,17 @@ try {
   ], { cwd: repoRoot });
 
   const result = JSON.parse(stdout);
+  assert.equal(result.dashboardRegistrations.product.product.product_id, result.product_id);
   assert.equal(result.dashboardRegistrations.monitors.accepted, 5);
-  assert.equal(result.dashboardRegistrations.alerts.accepted, 3);
+  assert.equal(result.dashboardRegistrations.alerts.accepted, result.alerts.length);
+  assert.ok(result.alerts.length >= 4);
   assert.equal(result.dashboardRegistrations.status_page.accepted, 1);
 
   const summary = await fetch(`${base}/api/summary`, {
     headers: { authorization: `Bearer ${apiKey}` }
   }).then((response) => response.json());
   assert.equal(summary.monitors, 5);
-  assert.equal(summary.alerts, 3);
+  assert.equal(summary.alerts, result.alerts.length);
 } finally {
   await new Promise((resolve) => server.close(resolve));
   await fs.rm(tempDir, { recursive: true, force: true });

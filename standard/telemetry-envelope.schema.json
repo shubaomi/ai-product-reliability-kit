@@ -8,7 +8,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "1.0"
+      "pattern": "^1\\.[0-9]+$"
     },
     "type": {
       "type": "string",
@@ -39,9 +39,17 @@
     "request_id": {
       "type": "string"
     },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "timestamp": {
+      "type": "string",
+      "deprecated": true
+    },
     "payload": {
       "type": "object"
     }
   }
 }
-

@@ -1,0 +1,38 @@
+schema_version: "1.0"
+activation_status: "PENDING MANUAL ENABLEMENT"
+activation_note: "This file is configuration only. No external provider has been configured or contacted."
+service:
+  id: ai-product-reliability-kit
+  name: AI Product Reliability Kit
+  public_base_url: https://reliability.hihongrun.com
+  owner: platform-operations
+monitors:
+  - id: apr-platform-liveness
+    kind: https
+    url: https://reliability.hihongrun.com/healthz
+    method: GET
+    expected_status: 200
+    interval_seconds: 60
+    timeout_seconds: 5
+    consecutive_failures: 3
+    regions_required: 2
+  - id: apr-platform-readiness
+    kind: https
+    url: https://reliability.hihongrun.com/readyz
+    method: GET
+    expected_status: 200
+    interval_seconds: 60
+    timeout_seconds: 5
+    consecutive_failures: 2
+    regions_required: 2
+notifications:
+  mode: provider-neutral-webhook
+  webhook_url_env: APR_EXTERNAL_MONITOR_NOTIFICATION_URL
+manual_enablement:
+  required: true
+  steps:
+    - Import or translate both monitor definitions into the selected external uptime provider.
+    - Configure checks from at least two external regions.
+    - Configure the notification destination without committing its secret URL.
+    - Trigger a safe test failure and recovery, then record provider evidence in the production readiness report.
+    - Change activation_status only after a human verifies the provider is polling from outside the platform host.

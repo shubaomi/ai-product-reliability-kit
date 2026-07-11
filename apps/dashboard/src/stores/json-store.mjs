@@ -20,55 +20,34 @@ export class JsonStore extends MemoryStore {
 
   async persist() {
     await fs.mkdir(path.dirname(this.storePath), { recursive: true });
-    await fs.writeFile(this.storePath, JSON.stringify(this.state, null, 2), "utf8");
+    const temporary = `${this.storePath}.tmp`;
+    await fs.writeFile(temporary, JSON.stringify(this.state, null, 2), "utf8");
+    await fs.rename(temporary, this.storePath);
   }
 
-  async upsertProduct(input) {
-    const result = await super.upsertProduct(input);
-    await this.persist();
+  async mutate(method, args) {
+    const result = await MemoryStore.prototype[method].apply(this, args);
+    if (result !== null) await this.persist();
     return result;
   }
 
-  async appendIngestItems(items) {
-    const result = await super.appendIngestItems(items);
-    await this.persist();
-    return result;
-  }
-
-  async appendMonitors(monitors) {
-    const result = await super.appendMonitors(monitors);
-    await this.persist();
-    return result;
-  }
-
-  async appendAlerts(alerts) {
-    const result = await super.appendAlerts(alerts);
-    await this.persist();
-    return result;
-  }
-
-  async appendStatusPages(statusPages) {
-    const result = await super.appendStatusPages(statusPages);
-    await this.persist();
-    return result;
-  }
-
-  async recordMonitorRun(run) {
-    const result = await super.recordMonitorRun(run);
-    await this.persist();
-    return result;
-  }
-
-  async appendAlertDelivery(delivery) {
-    const result = await super.appendAlertDelivery(delivery);
-    await this.persist();
-    return result;
-  }
-
-  async createIncident(incident) {
-    const result = await super.createIncident(incident);
-    await this.persist();
-    return result;
-  }
+  async upsertProduct(...args) { return this.mutate("upsertProduct", args); }
+  async appendIngestItems(...args) { return this.mutate("appendIngestItems", args); }
+  async appendMonitors(...args) { return this.mutate("appendMonitors", args); }
+  async appendAlerts(...args) { return this.mutate("appendAlerts", args); }
+  async appendStatusPages(...args) { return this.mutate("appendStatusPages", args); }
+  async recordMonitorRun(...args) { return this.mutate("recordMonitorRun", args); }
+  async appendAlertDelivery(...args) { return this.mutate("appendAlertDelivery", args); }
+  async upsertAlertInstance(...args) { return this.mutate("upsertAlertInstance", args); }
+  async acknowledgeAlertInstance(...args) { return this.mutate("acknowledgeAlertInstance", args); }
+  async createIncident(...args) { return this.mutate("createIncident", args); }
+  async updateIncident(...args) { return this.mutate("updateIncident", args); }
+  async createMaintenanceWindow(...args) { return this.mutate("createMaintenanceWindow", args); }
+  async runRetention(...args) { return this.mutate("runRetention", args); }
+  async createApiKey(...args) { return this.mutate("createApiKey", args); }
+  async rotateApiKey(...args) { return this.mutate("rotateApiKey", args); }
+  async revokeApiKey(...args) { return this.mutate("revokeApiKey", args); }
+  async markApiKeyUsed(...args) { return this.mutate("markApiKeyUsed", args); }
+  async createComplianceScan(...args) { return this.mutate("createComplianceScan", args); }
+  async appendAuditLog(...args) { return this.mutate("appendAuditLog", args); }
 }
-

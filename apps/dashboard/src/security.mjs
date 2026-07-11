@@ -3,7 +3,11 @@ import crypto from "node:crypto";
 const SESSION_COOKIE = "apr_session";
 
 export function createSecurity(config) {
-  const rateState = new Map();
+  const rateStates = new Map([
+    ["login", new Map()],
+    ["ingest", new Map()],
+    ["general", new Map()]
+  ]);
 
   return {
     SESSION_COOKIE,
@@ -14,11 +18,14 @@ export function createSecurity(config) {
       if (method === "GET" && ["/styles.css", "/app.js"].includes(pathname)) return true;
       if (method === "POST" && pathname === "/api/session/login") return true;
       if (method === "GET" && pathname === "/api/status") return true;
+      if (method === "GET" && ["/healthz", "/readyz"].includes(pathname)) return true;
       return false;
     },
 
-    checkRateLimit(request) {
-      const ip = clientIp(request);
+    checkRateLimit(request, url) {
+      const bucketName = rateBucket(request.method, url?.pathname ?? request.url ?? "/");
+      const rateState = rateStates.get(bucketName);
+      const ip = clientIp(request, config);
       const now = Date.now();
       const bucket = rateState.get(ip) ?? { start: now, count: 0 };
       if (now - bucket.start > config.rateLimitWindowMs) {
@@ -27,9 +34,17 @@ export function createSecurity(config) {
       }
       bucket.count += 1;
       rateState.set(ip, bucket);
+      if (rateState.size > 10_000) cleanupExpired(rateState, now, config.rateLimitWindowMs);
+      const limit = bucketName === "login"
+        ? config.loginRateLimitMax
+        : bucketName === "ingest"
+          ? config.ingestRateLimitMax
+          : config.rateLimitMax;
       return {
-        ok: bucket.count <= config.rateLimitMax,
-        remaining: Math.max(0, config.rateLimitMax - bucket.count)
+        ok: bucket.count <= limit,
+        remaining: Math.max(0, limit - bucket.count),
+        bucket: bucketName,
+        clientIp: ip
       };
     },
 
@@ -86,6 +101,10 @@ export function hashSecret(value) {
   return crypto.createHash("sha256").update(String(value)).digest("hex");
 }
 
+export function createApiKeySecret() {
+  return `apr_pk_${crypto.randomBytes(32).toString("base64url")}`;
+}
+
 export function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
   const hash = crypto.pbkdf2Sync(password, salt, 210_000, 32, "sha256").toString("hex");
   return `pbkdf2_sha256$210000$${salt}$${hash}`;
@@ -138,8 +157,19 @@ function parseCookie(header) {
   );
 }
 
-function clientIp(request) {
-  return request.headers["x-forwarded-for"]?.split(",")[0]?.trim() ?? request.socket?.remoteAddress ?? "unknown";
+export function clientIp(request, config = {}) {
+  const remoteAddress = normalizeIp(request.socket?.remoteAddress ?? "unknown");
+  const trusted = new Set((config.trustedProxyIps ?? []).map(normalizeIp));
+  if (!trusted.has(remoteAddress)) return remoteAddress;
+  const forwarded = String(request.headers["x-forwarded-for"] ?? "")
+    .split(",")
+    .map((value) => normalizeIp(value.trim()))
+    .filter(Boolean);
+  let current = remoteAddress;
+  for (let index = forwarded.length - 1; index >= 0 && trusted.has(current); index -= 1) {
+    current = forwarded[index];
+  }
+  return current;
 }
 
 function buildSecurityHeaders(config) {
@@ -162,3 +192,19 @@ function buildSecurityHeaders(config) {
   };
 }
 
+function rateBucket(method, pathname) {
+  if (method === "POST" && pathname === "/api/session/login") return "login";
+  if (method === "POST" && ["/api/ingest", "/api/compliance-scans"].includes(pathname)) return "ingest";
+  return "general";
+}
+
+function cleanupExpired(state, now, windowMs) {
+  for (const [key, bucket] of state) {
+    if (now - bucket.start > windowMs) state.delete(key);
+  }
+}
+
+function normalizeIp(value) {
+  const text = String(value ?? "").trim();
+  return text.startsWith("::ffff:") ? text.slice(7) : text;
+}

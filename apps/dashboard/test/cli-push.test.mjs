@@ -43,8 +43,15 @@ try {
     headers: { authorization: `Bearer ${apiKey}` }
   }).then((response) => response.json());
   assert.equal(summary.products, 1);
-  assert.equal(summary.events, 1);
-  assert.equal(summary.latest_health["reliable-nextjs-example"].payload.ok, true);
+  assert.equal(summary.events, 0);
+  assert.equal(summary.latest_health["reliable-nextjs-example"], undefined);
+
+  const scans = await fetch(`${base}/api/compliance-scans?product_id=reliable-nextjs-example`, {
+    headers: { authorization: `Bearer ${apiKey}` }
+  }).then((response) => response.json());
+  assert.equal(scans.items.length, 1);
+  assert.equal(scans.items[0].environment, "local");
+  assert.equal(scans.items[0].product_id, "reliable-nextjs-example");
 } finally {
   await new Promise((resolve) => server.close(resolve));
   await fs.rm(tempDir, { recursive: true, force: true });

@@ -31,6 +31,10 @@
         },
         "repo": {
           "type": "string"
+        },
+        "repository": {
+          "type": "string",
+          "deprecated": true
         }
       }
     },
@@ -112,12 +116,76 @@
         }
       }
     },
+    "public_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the redacted production status may be published. Omission remains private."
+        }
+      }
+    },
     "capabilities": {
       "type": "object",
       "additionalProperties": {
         "type": "boolean"
       }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "command"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9_-]*$"
+              },
+              "command": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "controls": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "product-contract",
+                    "health-check",
+                    "readiness-check",
+                    "system-passport",
+                    "runbook",
+                    "rollback",
+                    "ci-quality-gate",
+                    "smoke-tests",
+                    "error-tracking",
+                    "product-events",
+                    "release-tracking",
+                    "security-maintenance"
+                  ]
+                }
+              },
+              "timeout_ms": {
+                "type": "integer",
+                "minimum": 10,
+                "maximum": 300000
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
-

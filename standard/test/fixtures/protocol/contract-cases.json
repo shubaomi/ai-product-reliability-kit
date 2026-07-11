@@ -1,0 +1,17 @@
+{
+  "supported_versions": ["1.0", "1.1", "1.9"],
+  "unsupported_major": "2.0",
+  "required_fields": [
+    "schema_version",
+    "type",
+    "product_id",
+    "environment",
+    "release",
+    "occurred_at",
+    "payload",
+    "idempotency_key"
+  ],
+  "deprecated_fields": {
+    "timestamp": "occurred_at"
+  }
+}

@@ -1,118 +1,119 @@
 # AI Product Reliability Kit
 
-Reusable standards, SDKs, dashboard, automation, templates, a Codex skill, and a CLI for making AI-built products easier to understand, monitor, debug, and safely evolve.
+AI Product Reliability Kit is a local-first reliability control plane for small teams operating AI-built products. It combines a formal product contract, evidence-aware scanner, production server SDKs, an environment-isolated operations Dashboard, structured monitoring and incident workflows, and PM2/Nginx/PostgreSQL release tooling.
 
-The repository includes a production-ready v1 dashboard path: Postgres persistence, API key authentication, reliable ingestion validation, scheduled monitors, alert delivery hooks, public status pages, AI incident packages, Docker Compose deployment, and multi-language SDKs.
+The production V1 implementation and its verification assets are present in this repository. That does **not** mean this checkout has been deployed, that external monitoring is active, or that configured Linux-only CI gates have passed for an unpushed worktree. Treat a gate as passed only when its result is recorded for the exact revision; activation steps and remaining evidence are explicit in [docs/production.md](docs/production.md) and [docs/production-readiness-report.md](docs/production-readiness-report.md).
 
 ## What Is Included
 
-- `standard/` - Core reliability standard, product contract schema, event, health, and release compatibility guidance.
-- `cli/` - Dependency-light Node.js CLI that scans a project and reports missing reliability controls.
-- `sdks/` - Lightweight Node, Python, and Java clients for the ingestion protocol.
-- `apps/dashboard/` - Central dashboard, collector API, Postgres store, scheduler, status pages, and incident packages.
-- `automation/` - Monitor, alert, status page, and AI incident package generator.
-- `skill/ai-product-reliability/` - Codex skill for auditing or improving projects with this standard.
-- `templates/` - Product contract, documentation, CI, and smoke test templates.
-- `examples/node-nextjs/` - Minimal example project that follows the MVP standard.
-- `docs/` - Architecture, production deployment, dashboard, SDK, automation, and roadmap notes.
+- `standard/` — YAML product contract, JSON Schemas, v1.x compatibility, health, event, release, and operational standards.
+- `cli/` — Scanner with declared/detected/verified evidence, honest scoring, safe allowlisted `--verify`, report/passport output, and compliance upload.
+- `sdks/` — Installable Node.js, Python, and Java 17 server SDKs with bounded queues, timeout/retry, idempotency, requeue, drop counters, and shutdown flush.
+- `apps/dashboard/` — Native operations UI, validated YAML/manual onboarding, collector API, versioned PostgreSQL migrations, stores, state projection, incidents, public status, and an independently runnable worker.
+- `automation/` — Provider-neutral monitor, four-rule alert, status-page, and incident-package generation from `product.yml`.
+- `deploy/` and `scripts/ops/` — Two-process PM2 topology, external-monitor template, cron example, backup/restore/drill, release retention, and deployment simulations.
+- `skill/ai-product-reliability/` — Reusable Codex audit/implementation workflow.
+- `templates/` and `examples/` — Adoption starting points. The example intentionally contains placeholders and is expected to score below 100 until they are replaced and verified.
 
-## Quick Start
+## Local Setup
+
+Prerequisites: Node.js 20+ (CI uses 22), npm, and Python 3.10+ for the Python SDK tests. Java 17+ and Maven are required for the Java contract.
 
 ```bash
-cd E:/Projects/ai-product-reliability-kit
-node cli/src/index.mjs scan examples/node-nextjs
+npm ci
+npm ci --prefix standard
+npm ci --prefix cli
+npm ci --prefix automation
+npm ci --prefix apps/dashboard
 ```
 
-Start the dashboard:
+Run the evidence-aware example scan:
+
+```bash
+node cli/src/index.mjs scan examples/node-nextjs --verify
+```
+
+Start the local JSON-backed Dashboard:
 
 ```bash
 npm run dashboard
 ```
 
-Push the example product and scan result into the dashboard:
+Open `http://127.0.0.1:8787`. Local mode is unauthenticated unless `APR_AUTH_REQUIRED=true`; production always fails closed unless auth, PostgreSQL, trusted-proxy, and secret settings are valid.
+
+Use **Register product** to import and validate a complete `product.yml`, or build the same complete contract through the manual form. Publication defaults to private. Onboarding then reveals one product-scoped, ingest-only key, shows server-side Node/Python/Java snippets that read it from `APR_PRODUCT_API_KEY`, proves a keyed ingest plus operator readback, and unlocks the first environment-scoped monitor. The key value is shown once; store it in that product's server-side secret manager before leaving the step.
+
+Useful CLI flows:
 
 ```bash
-node cli/src/index.mjs push examples/node-nextjs
-```
+# Machine-readable report
+node cli/src/index.mjs scan examples/node-nextjs --json --out .tmp/example-report.json
 
-Generate monitors, alerts, status page, and AI incident package:
-
-```bash
+# Generate provider-neutral operations artifacts
 node cli/src/index.mjs automate examples/node-nextjs --out .tmp/automation-example
+
+# Upload a compliance scan (kept separate from operational health)
+node cli/src/index.mjs push examples/node-nextjs --dashboard-url http://127.0.0.1:8787 --api-key "$APR_API_KEY"
 ```
 
-Register those generated operations artifacts with the running dashboard:
-
-```bash
-node cli/src/index.mjs automate examples/node-nextjs --out .tmp/automation-example --register-dashboard
-```
-
-## Production Deployment
-
-Prepare `.env`, generate secrets, and run the Postgres-backed platform:
+Docker Compose is available for local PostgreSQL integration. It is not the production release mechanism:
 
 ```bash
 cp .env.example .env
-npm --prefix apps/dashboard run hash-password -- "replace-with-a-strong-password"
+npm --prefix apps/dashboard run hash-password -- "choose-a-strong-password"
 docker compose up -d --build
 ```
 
-Use `APR_MASTER_API_KEY` for admin CLI operations and `APR_INGEST_API_KEY` in product SDKs:
+## Trust Model
 
-```bash
-node cli/src/index.mjs push examples/node-nextjs --dashboard-url http://localhost:8787 --api-key replace-with-master-key
-```
+- Operational state is computed per `product_id + environment` as `unknown`, `operational`, `degraded`, or `outage` from fresh health, configured monitors and their runs, active structured alerts, and unresolved incidents. A critical monitor with no run remains unknown; missing data never becomes healthy, and Staging cannot mask Production.
+- Compliance scans are independent evidence and never change operational state.
+- Only four structured alert rules exist: availability failure, telemetry stale, error spike, and critical-journey drop. The kit does not contain a general alert DSL.
+- Product API keys are reveal-once, hashed at rest, product-scoped, expirable, rotatable, revocable, and limited to `ingest` and/or `read`. Product SDKs should use a product-scoped ingest key through the application-owned name `APR_PRODUCT_API_KEY`; the platform-wide ingest key is reserved for controlled migration/operations.
+- Idempotency is scoped by `product_id + environment + idempotency_key` across all telemetry types. Reusing a key in Staging cannot suppress a Production signal.
+- Public status is private by default, opt-in through the validated `public_status.enabled` boolean, Production-only, and projected through an allowlist that excludes owners, raw reasons, keys, payloads, and internal status-page bodies.
+- Sensitive login, product/configuration, key, incident, maintenance, scheduler, and retention mutations produce bounded audit records without plaintext secrets or copied request bodies.
+- Browser/mobile clients must not embed product keys. The production SDKs are server-side clients; untrusted clients should send through their own authenticated backend proxy.
 
-See `docs/production.md` for the full production setup.
+## Production Topology
 
-Write a system passport draft into a target project:
-
-```bash
-node cli/src/index.mjs scan E:/Projects/my-product --write-passport
-```
-
-Create JSON output:
-
-```bash
-node cli/src/index.mjs scan E:/Projects/my-product --json --out report.json
-```
-
-## Use the Skill
-
-The reusable Codex skill lives at:
+The supported production path is fixed:
 
 ```text
-skill/ai-product-reliability
+reliability.hihongrun.com
+        ↓ Nginx
+127.0.0.1:8787
+        ↓
+PM2 API:    ai-product-reliability-kit
+PM2 Worker: ai-product-reliability-worker
+        ↓
+PostgreSQL
 ```
 
-Copy or symlink that folder into your Codex skills directory when you want it auto-discovered. The skill tells an AI agent to audit a project with the same standard, use the CLI when available, generate a minimal adoption plan, and verify changes by rerunning the scan.
+Source is `/data/claude_project/ai-product-reliability-kit`; activated release application contents are not edited in place under `/data/prod/ai-product-reliability-kit/releases`, with atomic `current` and `previous` links. A failed release may receive only the documented `.deploy-failed` diagnostic marker. `deploy.sh` backs up, migrates, switches, reloads, accepts, and automatically restores the prior release on failure. It never uses `pm2 delete`.
 
-## MVP Success Criteria
+Do not run a production deployment from this README alone. Follow [docs/production.md](docs/production.md), [docs/deployment-acceptance.md](docs/deployment-acceptance.md), and [docs/runbook.md](docs/runbook.md).
 
-A scanned project should produce:
+## Verification
 
-- Product contract coverage.
-- Missing reliability controls.
-- Risk grade and weighted score.
-- Prioritized adoption plan.
-- System passport draft.
+```bash
+npm test
+npm run test:ops
+npm run test:e2e
 
-## Runtime Success Criteria
+# Java (example)
+mvn -f sdks/java/pom.xml verify
+```
 
-- SDKs send product, event, error, health, and release envelopes to `/api/ingest`.
-- Dashboard shows registered products, health, events, errors, monitors, alerts, and public status pages.
-- Automation generates provider-neutral monitor definitions, alert rules, status page draft, and AI incident package from `product.yml`.
-- Production deployments use Postgres, authentication, API keys, scheduler execution, alert delivery records, and Docker Compose.
+Real PostgreSQL, Linux symlink rollback, ShellCheck, and Nginx validation are executable CI gates. If they have not run for the current revision, treat them as unverified—not implied by local Windows success.
 
-## Adoption Model
+## Documentation
 
-Existing projects should start with the CLI and templates. Do not rewrite the product first. Add the smallest missing controls in this order:
-
-1. Product contract.
-2. Health checks.
-3. Error tracking and release version.
-4. Core journey events.
-5. CI checks and smoke tests.
-6. Runbooks and rollback notes.
-
-New projects should copy `templates/product.yml` and the docs/CI/test templates before feature work begins.
+- [Architecture](docs/architecture.md)
+- [Dashboard and API](docs/dashboard.md)
+- [SDKs](docs/sdk.md)
+- [Production deployment](docs/production.md)
+- [Runbook](docs/runbook.md)
+- [Rollback](docs/rollback.md)
+- [Roadmap and boundaries](docs/roadmap.md)
+- [Changelog](CHANGELOG.md)

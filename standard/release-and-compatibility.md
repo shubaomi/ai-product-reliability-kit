@@ -1,57 +1,29 @@
 # Release and Compatibility Standard v1
 
-Small teams need release practices that reduce breakage without requiring a large platform team.
+Every runtime and deployment signal should expose a Git SHA, package version, image tag, or release ID. The same value should appear in error/event/health evidence and the System Passport so operators can correlate a regression without guessing.
 
-## Release Identity
+## Contract and API Compatibility
 
-Every runtime should expose a release value from one of:
+- Add optional fields before deprecating old fields.
+- Keep compatible v1.x readers tolerant of unknown optional fields.
+- Emit deprecation warnings and migration advice; reject only an unknown major or invalid contract.
+- Preserve API response fields across the retained application release window.
+- Support old mobile/browser clients according to the product's measured usage and sunset policy; this kit does not store secrets in those clients.
 
-- Git SHA.
-- Package version.
-- Container image tag.
-- Deployment platform release ID.
+## Expand/Contract Database Changes
 
-The value should appear in:
+1. Add new nullable/defaulted structures without removing the old shape.
+2. Deploy code that can operate across the release window; dual-read/write only where evidence requires it.
+3. Backfill and verify separately when needed.
+4. Deploy code that depends on the new shape.
+5. Remove old structures only after retained releases and clients no longer need them.
 
-- Error tracking.
-- Logs.
-- Product events.
-- Health checks.
-- System passport.
+The kit's migration runner is forward-only, transactional per migration, checksummed, recorded, and advisory-locked. Application rollback never implies a down migration. The current integrity upgrade keeps older application writes usable while introducing environment-scoped ingest deduplication, archives duplicate legacy status-page rows before adding uniqueness, and backfills structured alert-instance types.
 
-## Compatibility Rules
-
-- Add fields before removing fields.
-- Keep API responses backward compatible across one release window.
-- For mobile apps and mini programs, support old clients until usage is low enough to sunset.
-- Use database expand-contract migrations for breaking schema changes.
-- Use feature flags for risky user-facing changes.
-- Keep rollback instructions current for each deployment target.
-
-## Expand-Contract Database Migration
-
-1. Expand: add nullable/new fields and keep old fields.
-2. Dual read/write if needed.
-3. Backfill data.
-4. Deploy code that only needs the new shape.
-5. Contract: remove old fields after old code and clients are gone.
+Legacy free-form alert conditions are not trustworthy structured rules. During upgrade they are preserved for inspection, mapped only for compatibility, disabled, and given migration advice. Recreate the intended rule with an explicit product, environment, and one of the four supported rule types; do not blindly enable the migrated legacy row.
 
 ## Rollback Readiness
 
-Each product should document:
+Document the current and previous release, exact rollback command, migration/data limitations, owner, verification endpoints, and notification path. Before switching releases, create and verify a database backup. After switching, accept both liveness and readiness; a public status 200 alone is insufficient.
 
-- Last known good deployment.
-- Rollback command or platform steps.
-- Data migration rollback limitations.
-- Feature flags or kill switches.
-- Owner and notification channel.
-
-## Deprecation Policy
-
-When a standard or product contract changes:
-
-- Keep old versions readable.
-- Emit upgrade warnings, not hard failures.
-- Provide automated migration advice.
-- Require manual review only for breaking data or API changes.
-
+Feature flags may be an application-specific mitigation if that product already owns a safe flag system. This standard does not require or provide a feature-flag service.

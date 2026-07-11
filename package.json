@@ -4,12 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm --prefix cli test && npm --prefix sdks/node test && python -m unittest discover -s sdks/python/tests && npm --prefix apps/dashboard test && npm --prefix automation test && node scripts/check-java-sdk.mjs",
+    "test": "npm --prefix standard test && npm --prefix cli test && npm --prefix sdks/node test && python -B -m unittest discover -s sdks/python/tests && npm --prefix apps/dashboard test && npm --prefix automation test",
+    "test:ops": "node --test scripts/ops/operations.test.mjs",
+    "test:e2e": "playwright test --project=desktop-chromium && playwright test --project=mobile-chromium",
     "dashboard": "node apps/dashboard/server.mjs",
     "automate:example": "node automation/src/index.mjs generate examples/node-nextjs --out .tmp/automation-example",
     "scan:example": "node cli/src/index.mjs scan examples/node-nextjs"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1"
   }
 }

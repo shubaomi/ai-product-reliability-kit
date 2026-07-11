@@ -13,8 +13,7 @@ create table if not exists users (
   email text not null,
   password_hash text not null,
   role text not null default 'admin' check (role in ('admin', 'operator', 'viewer')),
-  created_at timestamptz not null default now(),
-  unique (organization_id, lower(email))
+  created_at timestamptz not null default now()
 );
 
 create table if not exists api_keys (
@@ -174,3 +173,4 @@ create index if not exists monitor_runs_product_time_idx on monitor_runs (produc
 create index if not exists alerts_product_enabled_idx on alerts (product_id) where enabled = true;
 create index if not exists monitors_product_enabled_idx on monitors (product_id) where enabled = true;
 create index if not exists api_keys_hash_active_idx on api_keys (key_hash) where revoked_at is null;
+create unique index if not exists users_organization_email_unique_idx on users (organization_id, lower(email));

@@ -1,71 +1,74 @@
 # AI Product Reliability Core Standard v1
 
-This standard defines the minimum reliability contract for AI-built products that are already used by real users or may become revenue-generating systems.
-
-The goal is not to force every project into the same architecture. The goal is to make every project understandable, observable, testable, and recoverable.
+This standard defines the minimum evidence needed to understand, monitor, test, and recover an AI-built product used by real users or revenue workflows. It does not force a framework, cloud, or observability vendor.
 
 ## Required Core Controls
 
-Every product should provide:
+1. **Product contract** — a valid `product.yml` naming stable product ID, owner, environments, critical journeys, dependencies, health paths, release source, rollback path, and supported standard version.
+2. **Liveness and readiness** — shallow `/healthz`; dependency-aware `/readyz` when normal service depends on external systems.
+3. **Release identity** — every error, event, health/release signal, and deployment identifies a version or Git SHA.
+4. **Safe error evidence** — errors include product, environment, release, and safe request/user context without credentials or private payloads.
+5. **Critical-journey evidence** — each important user outcome has a stable success event and, where practical, a paired failure event.
+6. **Behavioral smoke/E2E tests** — critical paths execute real behavior, not source-text assertions or placeholder commands.
+7. **CI quality gate** — deterministic install plus applicable lint/type/test/build/security/contract checks before release.
+8. **Evidence-sourced System Passport** — concise product, feature, architecture, data/dependency, deployment, monitoring, and troubleshooting entries with source, time, and verification state.
+9. **Runbook, backup, and rollback** — human-operable incident and recovery steps, including data/migration limitations.
 
-1. **Product contract** - A `product.yml` file that identifies the product, owner, environments, critical journeys, dependencies, and supported standard version.
-2. **Health checks** - A lightweight `/healthz` endpoint and, when dependencies matter, a `/readyz` endpoint.
-3. **Release identity** - Every error, event, and deployment should carry a release version or Git SHA.
-4. **Error tracking** - Production errors should be captured with product ID, environment, release, and user/session context when safe.
-5. **Core journey events** - Each critical user journey should emit a success event and, when practical, a failure event.
-6. **Smoke tests** - Critical paths should have at least one automated smoke or E2E test.
-7. **CI quality gate** - Lint/typecheck/test/build/security checks should run before release where the stack supports them.
-8. **System passport** - A concise document that explains features, architecture, data, dependencies, deployment, and troubleshooting.
-9. **Runbook and rollback** - A human-readable guide for incident response and version rollback.
+## Product Contract and Publication
 
-## Capability Levels
+`product.yml` is parsed as formal YAML and validated against `product-contract.schema.json`; a regular-expression extraction or a plausible-looking document is not a valid contract. Compatible v1.x readers preserve older contracts and return warnings/migration advice.
 
-Use capability levels instead of all-or-nothing compliance.
+`public_status` is optional and, when present, must contain a boolean `enabled`. Omission means private. Registration, health, or monitor data never makes a product public implicitly; only an explicit `public_status.enabled: true` decision allows the redacted Production projection.
+
+The optional `verification.commands` entries are argument arrays, not shell strings. The CLI executes them with no shell through its bounded executable allowlist, applies the declared/default timeout, and distinguishes `success`, `failure`, `skipped`, and `unverified`. Generated placeholders, echo-only scripts, and non-allowlisted executables are skipped rather than promoted to verified evidence.
+
+## Evidence Levels
+
+Scanner and passport claims must distinguish:
 
 | Level | Meaning |
 | --- | --- |
-| L0 | Unknown product; no product contract or operational docs. |
-| L1 | Product contract, basic docs, health check, and release identity exist. |
-| L2 | Error tracking, core journey events, CI gate, and smoke tests exist. |
-| L3 | SLOs, alerts, status page, feature flags, and rollback exercises exist. |
-| L4 | Central dashboard integration, automated incident package, and regular reliability review exist. |
+| `declared` | A formal contract says the control should exist. |
+| `detected` | Relevant implementation/configuration evidence exists. |
+| `verified` | A safe command or runtime result proved the behavior. |
+| `unverified` | Evidence is absent, ambiguous, placeholder-only, or could not safely run. |
+| `stale` | Runtime evidence exists but is older than its freshness contract. |
 
-The MVP CLI focuses on L0-L2 because those deliver the fastest safety improvement with low migration risk.
+A README mention, dependency name, generated template, echo-only script, or manual placeholder must not receive verified credit.
+
+## Capability Levels
+
+| Level | Meaning |
+| --- | --- |
+| L0 | Product boundary and owner are unknown. |
+| L1 | Valid contract, owner, environments, health/release identity, and recovery docs exist. |
+| L2 | Error/journey evidence, behavioral smoke tests, and CI gates are detected or verified. |
+| L3 | Environment-scoped monitors, structured alerts, incidents, public-status decision, backup, and rollback exercise exist. |
+| L4 | Central state/incident operations, evidence-sourced passport, restore exercises, and recurring reliability review operate. |
+
+Partial adoption stays visible. A score is an evidence summary, not a substitute for operational state or production approval.
+
+## Operational State Boundary
+
+Runtime state is always scoped by `product_id + environment` and uses four values:
+
+- `unknown` — missing/stale evidence or a configured critical monitor with no run; never silently healthy.
+- `operational` — fresh successful evidence and no active reason.
+- `degraded` — current noncritical failure, active noncritical structured alert, or active incident.
+- `outage` — critical unresolved incident/alert or repeated critical health/monitor failure.
+
+Compliance scans are a separate plane and cannot change these states. A successful Staging signal cannot mask Production.
+
+Telemetry replay protection uses `product_id + environment + idempotency_key`. The same caller key in Staging and Production identifies two independent signals; replaying it in the same product/environment is accepted as a duplicate without storing a second record.
 
 ## Standard Versioning
 
-Projects declare a standard version:
+Projects declare a major/minor version such as `1.0`. Compatible `1.x` minors add optional fields or deprecations only. Readers must keep old v1 contracts usable, emit warnings and migration advice, ignore unknown optional fields, and reject unknown majors explicitly. Required-field or semantic breaks require a new major.
 
-```yaml
-standard_version: "1.0"
-```
+## Minimum Production-V1 Evidence
 
-Rules:
-
-- `1.x` may add optional fields only.
-- Breaking changes require `2.0`.
-- Central tools must keep reading old contracts and report upgrade advice instead of failing old projects.
-- Projects declare capabilities so partial adoption is visible and safe.
-
-## Minimal Compliance Definition
-
-A project is minimally compliant with v1 when it has:
-
-- `product.yml`
-- `/healthz`
-- release version source
-- error tracking plan or implementation
-- at least one critical journey with a success event
-- system passport draft
-- rollback guide
+A project is not production-ready merely because files exist. At minimum, the relevant controls above must be detected and the critical runtime/deployment behaviors must be verified in CI or the target environment. Any environment-gated or manual control must be labelled as such in its readiness record.
 
 ## Non-Goals
 
-This standard does not require:
-
-- A specific programming language.
-- A specific cloud provider.
-- Rewriting existing systems.
-- Building a custom observability platform before using existing tools.
-- Full line-by-line human review of AI-generated code.
-
+This standard does not require rewriting the product, building custom APM/logging/replay/BI, providing a general alert DSL or feature-flag service, adopting the central Dashboard before core controls exist, or replacing specialized vendors. Use the smallest verified control that closes the real operational risk.

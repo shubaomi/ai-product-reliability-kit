@@ -1,0 +1,4 @@
+# PENDING MANUAL INSTALLATION. Review paths, database credentials, retention, and alert routing first.
+# Install with: sudo cp deploy/cron/ai-product-reliability-backup.cron /etc/cron.d/ai-product-reliability-backup
+# The apr service account owns the protected env file, backup directory, and pre-created log file.
+17 2 * * * apr /bin/bash -c 'set -a; . /data/prod/ai-product-reliability-kit/.env.production; set +a; BACKUP_DIR=/data/prod/ai-product-reliability-kit/shared/backups BACKUP_RETENTION_DAYS=14 BACKUP_LABEL=daily exec /bin/bash /data/prod/ai-product-reliability-kit/current/scripts/ops/backup-postgres.sh' >> /var/log/ai-product-reliability-backup.log 2>&1

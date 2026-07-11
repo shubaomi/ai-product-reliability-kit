@@ -44,16 +44,22 @@ await store.appendAlerts([
   {
     id: "scheduler-product-health-down",
     product_id: "scheduler-product",
+    environment: "production",
+    type: "availability_failure",
+    monitor_id: "scheduler-product-healthz",
     name: "Health down",
-    condition: "http_monitor_failed >= 2 consecutive checks",
+    consecutive_failures: 1,
     severity: "critical",
     action: "Investigate health"
   },
   {
     id: "scheduler-product-journey-drop",
     product_id: "scheduler-product",
-    name: "Journey drop",
-    condition: "success_event_count drops by 30 percent in 60 minutes",
+    environment: "production",
+    type: "availability_failure",
+    monitor_id: "scheduler-product-core-journey",
+    name: "Journey freshness failed",
+    consecutive_failures: 1,
     severity: "high",
     action: "Investigate events"
   }
@@ -61,6 +67,8 @@ await store.appendAlerts([
 
 const result = await runSchedulerOnce(store, {
   workerIntervalMs: 60_000,
+  allowedMonitorHosts: ["example.test", "127.0.0.1"],
+  dnsLookup: async () => [{ address: "93.184.216.34", family: 4 }],
   alertWebhookUrl: null,
   alertFeishuWebhookUrl: null
 }, {

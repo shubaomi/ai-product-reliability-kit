@@ -63,10 +63,9 @@ function envelope(type, payload) {
     schema_version: "1.0",
     type,
     product_id: "dashboard-test",
-    environment: "test",
+    environment: "production",
     release: "test-sha",
     occurred_at: new Date().toISOString(),
     payload
   };
 }
-

@@ -1,51 +1,50 @@
-# Roadmap
+# Roadmap and Scope Boundaries
 
-## Stage 1: MVP Audit Kit
+This page is an implementation inventory, not a go-live certificate. Exact local results, skips, configured-but-unrun CI gates, and manual activation state belong in `docs/production-readiness-report.md`.
 
-- Core standard and product contract.
-- CLI scanner and report generator.
-- System passport draft generator.
-- Codex skill.
-- Templates and example project.
+## Production V1 Baseline — Implemented
 
-## Stage 2: Runtime SDKs
+- Formal YAML product contracts with JSON Schema validation, v1.x compatibility, deprecation warnings, and migration advice.
+- Evidence-aware CLI scoring with declared/detected/verified distinctions, correct exclusions, safe allowlisted verification, honest placeholder handling, reports, passports, and independent compliance upload.
+- Production Node.js, Python, and Java 17 server SDKs with packaging and a shared resilience/contract test matrix.
+- Four versioned/checksummed/transactional PostgreSQL migrations with advisory locking, environment-scoped replay protection, legacy compatibility, and retention indexes.
+- Environment-isolated four-state runtime projection from health, configured monitor coverage/results, active structured alerts, and incidents.
+- HTTP, collector, and event-freshness monitors with individual cadence/timeout/environment and pre-fetch SSRF revalidation.
+- Four structured alert rules with thresholds/baselines, deduplication, cooldown, acknowledgement, resolution, and one recovery delivery.
+- Incident ownership, timeline, linked alerts, recovery notes, reopen, incident packages, and state impact.
+- Raw retention with transactional daily rollup, independent API/Worker processes, scheduler lease, and graceful shutdown.
+- Action-first native Dashboard, imported/manual schema-validated onboarding, reveal-once ingest-only key plus server SDK snippets, keyed write/operator readback, first monitor, product detail, alert-linked incident operation, evidence-sourced passport, and explicit private-by-default redacted public status.
+- Bounded secret-free audit records for login and sensitive configuration/incident/key/operations mutations.
+- Backup/restore/drill command boundaries, prepared atomic releases, automatic/manual rollback, retention, two-process PM2 config, complete Nginx config, provider-neutral external-monitor asset, and a root Linux CI workflow. Exact pass evidence remains revision-specific.
 
-- Define HTTP ingestion protocol. Done.
-- Add Node.js/TypeScript SDK. Done.
-- Add Python SDK. Done.
-- Add Java standard-library client. Done.
-- Provide framework adapters after the core SDKs are stable.
+## Activation Work — Manual or CI-Gated
 
-## Stage 3: Central Reliability Dashboard
+These are environmental evidence and authorization steps that must be produced before a production go-live claim. A configured workflow or repository template is not a passed/activated control:
 
-- Product inventory from `product.yml`. Done.
-- Error, event, release, and health aggregation. Done.
-- Multi-product operational dashboard. Done.
-- Postgres production store. Done.
-- Authenticated dashboard and API keys. Done.
-- Status page and alert routing hooks. Done.
-- Provider-specific alert adapters. Next.
+1. Run the root workflow on Linux for the exact revision, including real PostgreSQL, symlink deployment simulation, ShellCheck, Playwright, dependency audit, Maven, and `nginx -t`.
+2. Review and create the protected production env file, database role/database, filesystem ownership, and backup/restore-drill schedule.
+3. Validate and install the complete Nginx configuration, then perform the deployment acceptance checklist.
+4. Import the provider-neutral liveness/readiness checks into a selected external uptime provider, configure two regions/notifications, and record a safe failure/recovery test. Until then it remains `PENDING MANUAL ENABLEMENT`.
+5. Establish an ongoing cadence for backup verification, disposable restores, dependency updates, incident review, and release/retention review.
 
-## Stage 4: AI-Assisted Operations
+## Conditional Post-V1 Extensions
 
-- One-command incident package. Done.
-- Provider-neutral monitor and alert generation. Done.
-- Status page draft generation. Done.
-- Scheduler worker and alert delivery records. Done.
-- Release regression analysis. Next.
-- Codex plugin integration for dashboard-aware debugging. Next.
+Add these only when production evidence justifies their cost:
 
-## Production v1
+- Data partitioning after row volume/query evidence shows current indexes and retention are insufficient.
+- Additional language SDKs after an active product in that language is identified.
+- A specific alert/monitor provider adapter after the provider is selected and manual translation becomes a repeated burden.
+- Additional long-term aggregates after a concrete operational decision needs them.
+- Higher availability/multiple workers after load or recovery objectives require it; the advisory lease already provides the coordination boundary.
 
-- Docker Compose deployment with Postgres. Done.
-- Migration runner and password hash tooling. Done.
-- Public status page and machine-readable status API. Done.
-- Authenticated CLI push and automation registration. Done.
-- Cross-language SDK API key support. Done.
+## Explicitly Not Planned
 
-## Upgrade Policy
+The kit will not prebuild a full log platform, APM, session replay, BI/funnel/retention suite, general alert DSL, feature-flag service, SaaS tenancy/billing, cross-business automatic rollback platform, broad vendor-plugin marketplace, or multi-model consensus system. Individual products may use existing specialized tools; this repository does not duplicate them.
 
-- Keep v1 contracts readable.
-- Add optional fields in minor versions.
-- Reserve breaking changes for major versions.
-- Provide CLI migration advice before requiring project changes.
+## Compatibility Policy
+
+- Read compatible v1.x contracts and telemetry; add optional fields in minor versions.
+- Warn on deprecated fields and provide migration advice without breaking old v1 clients.
+- Reject unknown major versions with an explicit compatibility error.
+- Use expand/contract PostgreSQL migrations and keep every migration compatible with the retained previous application release.
+- Reserve a major version for semantic or required-field breaks.

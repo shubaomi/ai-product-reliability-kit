@@ -1,16 +1,18 @@
 {
   "name": "@ai-product-reliability/automation",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "bin": {
     "apr-automation": "./src/index.mjs"
   },
   "scripts": {
-    "test": "node src/index.mjs generate ../examples/node-nextjs --out ../.tmp/automation-test"
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@ai-product-reliability/standard": "file:../standard"
   },
   "engines": {
     "node": ">=20"
   }
 }
-

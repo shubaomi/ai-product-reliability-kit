@@ -1,21 +1,23 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import {
+  loadProductContract,
+  parseProductContractText
+} from "@ai-product-reliability/standard/product-contract";
 
 export async function generateAutomation(projectPath, options = {}) {
   const root = path.resolve(projectPath);
-  const contractPath = await findContract(root);
-  if (!contractPath) {
+  const contractResult = await loadProductContract(root);
+  if (!contractResult) {
     throw new Error(`No product.yml found in ${root}`);
   }
-
-  const contractText = await fs.readFile(contractPath, "utf8");
-  const contract = parseProductContract(contractText);
+  const contract = contractResult.contract;
   const outDir = path.resolve(options.outDir ?? path.join(root, "reliability", "generated"));
   const dashboardUrl = options.dashboardUrl ?? "http://127.0.0.1:8787";
   const now = new Date().toISOString();
 
   const monitors = buildMonitors(contract, dashboardUrl);
-  const alerts = buildAlerts(contract);
+  const alerts = buildAlerts(contract, monitors);
   const statusPage = buildStatusPage(contract, monitors, now);
   const incidentPackage = buildIncidentPackage(contract, monitors, alerts, now);
 
@@ -42,12 +44,15 @@ export async function generateAutomation(projectPath, options = {}) {
     files: Object.keys(files).map((name) => path.join(outDir, name)),
     monitors,
     alerts,
+    warnings: contractResult.warnings,
+    migration_advice: contractResult.migration_advice,
     dashboardRegistrations
   };
 }
 
 export function buildMonitors(contract, dashboardUrl) {
   const production = contract.environments.find((env) => env.name === "production") ?? contract.environments[0] ?? {};
+  const environment = production.name ?? "production";
   const baseUrl = (production.url || "").replace(/\/$/, "");
   const livePath = contract.health.live_path ?? "/healthz";
   const readyPath = contract.health.ready_path ?? "/readyz";
@@ -57,6 +62,7 @@ export function buildMonitors(contract, dashboardUrl) {
     monitors.push({
       id: `${contract.product.id}-healthz`,
       product_id: contract.product.id,
+      environment,
       type: "http",
       name: `${contract.product.name} liveness`,
       url: `${baseUrl}${livePath}`,
@@ -67,6 +73,7 @@ export function buildMonitors(contract, dashboardUrl) {
     monitors.push({
       id: `${contract.product.id}-readyz`,
       product_id: contract.product.id,
+      environment,
       type: "http",
       name: `${contract.product.name} readiness`,
       url: `${baseUrl}${readyPath}`,
@@ -80,6 +87,7 @@ export function buildMonitors(contract, dashboardUrl) {
     monitors.push({
       id: `${contract.product.id}-${journey.id}-journey`,
       product_id: contract.product.id,
+      environment,
       type: "event-freshness",
       name: `${journey.name} success event freshness`,
       event: journey.success_event,
@@ -92,6 +100,7 @@ export function buildMonitors(contract, dashboardUrl) {
   monitors.push({
     id: `${contract.product.id}-dashboard-ingest`,
     product_id: contract.product.id,
+    environment,
     type: "collector",
     name: "Dashboard ingestion endpoint",
     url: `${dashboardUrl.replace(/\/$/, "")}/api/ingest`,
@@ -102,35 +111,78 @@ export function buildMonitors(contract, dashboardUrl) {
   return monitors;
 }
 
-export function buildAlerts(contract) {
-  return [
-    {
-      id: `${contract.product.id}-health-down`,
+export function buildAlerts(contract, monitors = buildMonitors(contract, "http://127.0.0.1:8787")) {
+  const production = contract.environments.find((env) => env.name === "production") ?? contract.environments[0] ?? {};
+  const environment = production.name ?? "production";
+  const notify = [contract.product.owner];
+  const availabilityRules = monitors
+    .filter((monitor) => monitor.type === "http")
+    .map((monitor) => ({
+      id: `${monitor.id}-availability`,
       product_id: contract.product.id,
-      name: "Health check failing",
-      condition: "http_monitor_failed >= 2 consecutive checks",
-      severity: "critical",
-      notify: [contract.product.owner],
-      action: "Check /healthz, latest release, and hosting provider status."
+      environment: monitor.environment ?? environment,
+      type: "availability_failure",
+      monitor_id: monitor.id,
+      name: `${monitor.name} failing`,
+      severity: monitor.severity ?? "high",
+      consecutive_failures: monitor.severity === "critical" ? 2 : 3,
+      cooldown_seconds: 300,
+      recovery_threshold: 2,
+      notify,
+      action: "Check the endpoint, latest release, dependencies, and hosting status."
+    }));
+  const collector = monitors.find((monitor) => monitor.type === "collector");
+
+  return [
+    ...availabilityRules,
+    {
+      id: `${contract.product.id}-telemetry-stale`,
+      product_id: contract.product.id,
+      environment,
+      type: "telemetry_stale",
+      monitor_id: collector?.id ?? `${contract.product.id}-dashboard-ingest`,
+      event: "telemetry_received",
+      name: "Product telemetry is stale",
+      severity: "high",
+      min_samples: 1,
+      window_seconds: 900,
+      cooldown_seconds: 600,
+      recovery_threshold: 1,
+      notify,
+      action: "Check SDK delivery, collector availability, credentials, and the latest release."
     },
     {
       id: `${contract.product.id}-error-spike`,
       product_id: contract.product.id,
+      environment,
+      type: "error_spike",
       name: "Release error spike",
-      condition: "errors_current_release > errors_previous_release * 2 and errors_current_release >= 5",
       severity: "high",
-      notify: [contract.product.owner],
-      action: "Open AI incident package and compare recent errors by release."
+      min_samples: 5,
+      window_seconds: 900,
+      multiplier: 2,
+      cooldown_seconds: 600,
+      recovery_threshold: 2,
+      notify,
+      action: "Open the incident package and compare errors by release."
     },
-    {
-      id: `${contract.product.id}-journey-drop`,
+    ...contract.critical_journeys.map((journey) => ({
+      id: `${contract.product.id}-${journey.id}-journey-drop`,
       product_id: contract.product.id,
-      name: "Critical journey event drop",
-      condition: "success_event_count drops by 30 percent in 60 minutes",
+      environment,
+      type: "journey_drop",
+      journey_id: journey.id,
+      event: journey.success_event,
+      name: `${journey.name} success rate dropped`,
       severity: "high",
-      notify: [contract.product.owner],
-      action: "Check product analytics, recent deploys, and user-facing errors."
-    }
+      min_samples: 5,
+      window_seconds: 3600,
+      drop_percent: 30,
+      cooldown_seconds: 900,
+      recovery_threshold: 2,
+      notify,
+      action: "Check journey events, user-facing errors, dependencies, and recent releases."
+    }))
   ];
 }
 
@@ -189,7 +241,7 @@ ${monitors.map((monitor) => `- ${monitor.id}: ${monitor.name} (${monitor.type})`
 
 ## Alerts
 
-${alerts.map((alert) => `- ${alert.id}: ${alert.condition}`).join("\n")}
+${alerts.map((alert) => `- ${alert.id}: ${alert.type}`).join("\n")}
 
 ## Suggested AI Prompt
 
@@ -199,6 +251,13 @@ Use the files in this package plus the latest logs, events, errors, and release 
 
 async function registerDashboardArtifacts(dashboardUrl, contract, monitors, alerts, statusPage, apiKey) {
   const endpoint = dashboardUrl.replace(/\/$/, "");
+  const productResult = await postJson(`${endpoint}/api/products`, {
+    standard_version: contract.standard_version,
+    product: contract.product,
+    environments: contract.environments,
+    critical_journeys: contract.critical_journeys,
+    contract
+  }, apiKey);
   const monitorResult = await postJson(`${endpoint}/api/monitors`, { items: monitors }, apiKey);
   const alertResult = await postJson(`${endpoint}/api/alerts`, { items: alerts }, apiKey);
   const statusResult = await postJson(`${endpoint}/api/status-pages`, {
@@ -208,6 +267,7 @@ async function registerDashboardArtifacts(dashboardUrl, contract, monitors, aler
     generated_at: new Date().toISOString()
   }, apiKey);
   return {
+    product: productResult,
     monitors: monitorResult,
     alerts: alertResult,
     status_page: statusResult
@@ -230,85 +290,6 @@ async function postJson(url, payload, apiKey) {
   return response.json().catch(() => ({ ok: true }));
 }
 
-async function findContract(root) {
-  for (const candidate of ["product.yml", "product.yaml", "reliability/product.yml", "config/product.yml"]) {
-    const fullPath = path.join(root, candidate);
-    try {
-      await fs.access(fullPath);
-      return fullPath;
-    } catch {
-      // keep looking
-    }
-  }
-  return null;
-}
-
-export function parseProductContract(text) {
-  const productBlock = block(text, "product");
-  const healthBlock = block(text, "health");
-  return {
-    standard_version: scalar(text, "standard_version") ?? "unknown",
-    product: {
-      id: scalar(productBlock, "id") ?? "unknown-product",
-      name: scalar(productBlock, "name") ?? "Unknown Product",
-      owner: scalar(productBlock, "owner") ?? "unknown"
-    },
-    environments: parseEnvironments(block(text, "environments")),
-    critical_journeys: parseJourneys(block(text, "critical_journeys")),
-    health: {
-      live_path: scalar(healthBlock, "live_path") ?? "/healthz",
-      ready_path: scalar(healthBlock, "ready_path") ?? "/readyz"
-    }
-  };
-}
-
-function parseEnvironments(text) {
-  const items = splitListObjects(text);
-  return items.map((item) => ({
-    name: scalar(item, "name") ?? "production",
-    url: scalar(item, "url") ?? ""
-  }));
-}
-
-function parseJourneys(text) {
-  const items = splitListObjects(text);
-  return items.map((item) => ({
-    id: scalar(item, "id") ?? "journey",
-    name: scalar(item, "name") ?? scalar(item, "id") ?? "Journey",
-    success_event: scalar(item, "success_event") ?? "journey_completed",
-    failure_event: scalar(item, "failure_event")
-  }));
-}
-
-function block(text, key) {
-  const lines = text.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.match(new RegExp(`^${key}:\\s*$`)));
-  if (start < 0) return "";
-  const collected = [];
-  for (let i = start + 1; i < lines.length; i += 1) {
-    const line = lines[i];
-    if (/^[A-Za-z0-9_]+:\s*/.test(line)) break;
-    collected.push(line);
-  }
-  return collected.join("\n");
-}
-
-function splitListObjects(text) {
-  const items = [];
-  let current = [];
-  for (const line of text.split(/\r?\n/)) {
-    if (/^\s*-\s+/.test(line)) {
-      if (current.length) items.push(current.join("\n"));
-      current = [line.replace(/^\s*-\s+/, "")];
-    } else if (current.length) {
-      current.push(line);
-    }
-  }
-  if (current.length) items.push(current.join("\n"));
-  return items;
-}
-
-function scalar(text, key) {
-  const match = text.match(new RegExp(`(?:^|\\n)\\s*${key}:\\s*["']?([^"'\\n]+)["']?`, "i"));
-  return match?.[1]?.trim() ?? null;
+export function parseProductContract(text, source = "product.yml") {
+  return parseProductContractText(text, source).contract;
 }

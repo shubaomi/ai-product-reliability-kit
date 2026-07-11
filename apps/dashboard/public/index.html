@@ -3,92 +3,82 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#151511">
     <title>AI Product Reliability Dashboard</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
-    <main class="shell">
-      <section class="login-panel panel" id="login-panel" hidden>
-        <div>
-          <p class="eyebrow">Reliability Operations</p>
-          <h1>Admin Sign In</h1>
+    <div class="boot-screen" id="boot-screen" aria-live="polite">
+      <div class="boot-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <p>Establishing operational state</p>
+    </div>
+
+    <main class="auth-stage" id="login-panel" hidden>
+      <section class="auth-card" aria-labelledby="login-title">
+        <div class="auth-intro">
+          <p class="kicker">AI Product Reliability / Control room</p>
+          <h1 id="login-title">Operator sign in</h1>
+          <p>One desk for current failures, product evidence, incident response, and safe public communication.</p>
+          <div class="signal-legend" aria-label="Operational state legend">
+            <span><i class="dot outage"></i>Outage</span>
+            <span><i class="dot degraded"></i>Degraded</span>
+            <span><i class="dot unknown"></i>Unknown</span>
+            <span><i class="dot operational"></i>Operational</span>
+          </div>
         </div>
-        <form id="login-form" class="login-form">
-          <label>
-            Email
-            <input id="login-email" name="email" type="email" autocomplete="username" required>
-          </label>
-          <label>
-            Password
-            <input id="login-password" name="password" type="password" autocomplete="current-password" required>
-          </label>
-          <button type="submit">Sign In</button>
+        <form id="login-form" class="auth-form">
+          <p class="section-number">Authorized operators only / 01</p>
+          <label for="login-email">Email</label>
+          <input id="login-email" name="email" type="email" autocomplete="username" required>
+          <label for="login-password">Password</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+          <button class="button primary wide" type="submit">Enter operations desk</button>
           <p class="form-error" id="login-error" role="alert"></p>
         </form>
       </section>
+    </main>
 
-      <div id="dashboard-panel">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">Reliability Operations</p>
-            <h1>Product Fleet</h1>
+    <div class="app-frame" id="dashboard-panel" hidden>
+      <aside class="rail">
+        <a class="brand" href="#/" aria-label="Reliability operations home">
+          <span class="brand-mark" aria-hidden="true">R/</span>
+          <span><strong>Reliability</strong><small>Operations kit</small></span>
+        </a>
+        <nav class="rail-nav" aria-label="Product Fleet navigation">
+          <a href="#/" data-nav="home"><span>01</span>Operations</a>
+          <a href="#/products" data-nav="products"><span>02</span>Products</a>
+          <a href="#/incidents" data-nav="incidents"><span>03</span>Incidents</a>
+          <a href="#/public-status" data-nav="public-status"><span>04</span>Public status</a>
+        </nav>
+        <div class="rail-foot">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          <div><strong>Operator session</strong><small>Evidence, not assumptions</small></div>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="command-bar">
+          <div class="command-title">
+            <p class="kicker" id="page-kicker">Fleet / right now</p>
+            <h1 id="page-title">Operations desk</h1>
+            <p id="page-subtitle">Loading the current operational picture…</p>
           </div>
-          <div class="status-pill" id="fleet-status">Loading</div>
+          <div class="command-actions">
+            <button class="button quiet icon-button" id="refresh" type="button" aria-label="Refresh operational data">
+              <span aria-hidden="true">↻</span><span class="button-label">Refresh</span>
+            </button>
+            <button class="button primary" id="register-product" type="button">Register product</button>
+          </div>
         </header>
 
-        <section class="metrics" aria-label="Fleet metrics">
-          <article><span id="product-count">0</span><small>Products</small></article>
-          <article><span id="event-count">0</span><small>Events</small></article>
-          <article><span id="error-count">0</span><small>Errors</small></article>
-          <article><span id="monitor-count">0</span><small>Monitors</small></article>
-        </section>
-
-        <section class="grid">
-          <div class="panel span-7">
-            <div class="panel-head">
-              <h2>Products</h2>
-              <button id="refresh">Refresh</button>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Owner</th>
-                    <th>Version</th>
-                    <th>Status</th>
-                    <th>Errors</th>
-                    <th>Events</th>
-                  </tr>
-                </thead>
-                <tbody id="products"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="panel span-5">
-            <div class="panel-head">
-              <h2>Health</h2>
-            </div>
-            <div id="health-list" class="stack"></div>
-          </div>
-
-          <div class="panel span-6">
-            <div class="panel-head">
-              <h2>Recent Events</h2>
-            </div>
-            <div id="events" class="timeline"></div>
-          </div>
-
-          <div class="panel span-6">
-            <div class="panel-head">
-              <h2>Recent Errors</h2>
-            </div>
-            <div id="errors" class="timeline danger"></div>
-          </div>
-        </section>
+        <div id="global-banner" class="global-banner" hidden role="status"></div>
+        <main id="view-root" class="view-root" tabindex="-1" aria-live="polite"></main>
       </div>
-    </main>
+    </div>
+
+    <div id="modal-root"></div>
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <span class="sr-only">Product Fleet</span>
     <script src="/app.js"></script>
   </body>
 </html>

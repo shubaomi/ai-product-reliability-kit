@@ -1,6 +1,6 @@
 {
   "name": "@ai-product-reliability/cli",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "bin": {
@@ -8,7 +8,10 @@
   },
   "scripts": {
     "scan:example": "node src/index.mjs scan ../examples/node-nextjs",
-    "test": "node src/index.mjs scan ../examples/node-nextjs --json --out ../.tmp/example-report.json"
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@ai-product-reliability/standard": "file:../standard"
   },
   "engines": {
     "node": ">=20"

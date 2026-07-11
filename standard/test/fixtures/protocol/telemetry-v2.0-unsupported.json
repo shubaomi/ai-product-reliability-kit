@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0",
+  "type": "event",
+  "product_id": "fixture-product",
+  "environment": "production",
+  "release": "git:fixture",
+  "occurred_at": "2026-07-10T12:00:00.000Z",
+  "payload": {
+    "event": "fixture_completed",
+    "properties": {}
+  }
+}

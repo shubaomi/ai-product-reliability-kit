@@ -23,7 +23,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       HOST: 0.0.0.0
       PORT: 8787
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-http://localhost:8787}"
@@ -35,15 +35,17 @@ services:
       APR_MASTER_API_KEY: ${APR_MASTER_API_KEY:?set APR_MASTER_API_KEY}
       APR_INGEST_API_KEY: ${APR_INGEST_API_KEY:?set APR_INGEST_API_KEY}
       APR_SESSION_SECRET: ${APR_SESSION_SECRET:?set APR_SESSION_SECRET}
+      APR_USER_ID_HMAC_SECRET: ${APR_USER_ID_HMAC_SECRET:?set APR_USER_ID_HMAC_SECRET}
       APR_CORS_ORIGINS: "${APR_CORS_ORIGINS:-}"
       APR_WORKER_ENABLED: "${APR_WORKER_ENABLED:-true}"
+      APR_PROCESS_ROLE: all
       APR_WORKER_INTERVAL_MS: "${APR_WORKER_INTERVAL_MS:-60000}"
       APR_ALERT_WEBHOOK_URL: "${APR_ALERT_WEBHOOK_URL:-}"
       APR_ALERT_FEISHU_WEBHOOK_URL: "${APR_ALERT_FEISHU_WEBHOOK_URL:-}"
     ports:
       - "${DASHBOARD_PORT:-8787}:8787"
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/api/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 5

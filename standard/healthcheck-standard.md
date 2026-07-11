@@ -58,3 +58,4 @@ At minimum, monitor:
 - The success rate of declared critical journey events.
 - Release-specific error rate for the first hours after deployment.
 
+In a four-state reliability projection, registering a critical monitor does not make it passing: until its first result arrives, that product/environment remains `unknown`. A stale critical result also returns to `unknown`; a current failure degrades state and repeated critical failure can become `outage`. Active structured alerts and unresolved incidents remain independent reasons that can prevent `operational` even when `/healthz` is currently 200.
