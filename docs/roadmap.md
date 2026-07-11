@@ -1,6 +1,6 @@
 # Roadmap and Scope Boundaries
 
-This page is an implementation inventory, not a go-live certificate. Exact local results, skips, configured-but-unrun CI gates, and manual activation state belong in `docs/production-readiness-report.md`.
+This page is an implementation inventory, not a go-live certificate. Exact local results, skips, manual Linux/real-service gates, and activation state belong in `docs/production-readiness-report.md`.
 
 ## Production V1 Baseline — Implemented
 
@@ -15,13 +15,13 @@ This page is an implementation inventory, not a go-live certificate. Exact local
 - Raw retention with transactional daily rollup, independent API/Worker processes, scheduler lease, and graceful shutdown.
 - Action-first native Dashboard, imported/manual schema-validated onboarding, reveal-once ingest-only key plus server SDK snippets, keyed write/operator readback, first monitor, product detail, alert-linked incident operation, evidence-sourced passport, and explicit private-by-default redacted public status.
 - Bounded secret-free audit records for login and sensitive configuration/incident/key/operations mutations.
-- Backup/restore/drill command boundaries, prepared atomic releases, automatic/manual rollback, retention, two-process PM2 config, complete Nginx config, provider-neutral external-monitor asset, and a root Linux CI workflow. Exact pass evidence remains revision-specific.
+- Backup/restore/drill command boundaries, prepared atomic releases, automatic/manual rollback, retention, two-process PM2 config, complete Nginx config, provider-neutral external-monitor asset, and manual Linux validation guidance. Exact pass evidence remains revision-specific.
 
-## Activation Work — Manual or CI-Gated
+## Activation Work — Manual
 
-These are environmental evidence and authorization steps that must be produced before a production go-live claim. A configured workflow or repository template is not a passed/activated control:
+These are environmental evidence and authorization steps that must be produced before a production go-live claim. A repository template is not a passed or activated control:
 
-1. Run the root workflow on Linux for the exact revision, including real PostgreSQL, symlink deployment simulation, ShellCheck, Playwright, dependency audit, Maven, and `nginx -t`.
+1. Run the applicable manual checks on Linux for the exact revision, including real PostgreSQL, symlink deployment simulation, ShellCheck, Playwright, dependency audit, Maven, and `nginx -t`.
 2. Review and create the protected production env file, database role/database, filesystem ownership, and backup/restore-drill schedule.
 3. Validate and install the complete Nginx configuration, then perform the deployment acceptance checklist.
 4. Import the provider-neutral liveness/readiness checks into a selected external uptime provider, configure two regions/notifications, and record a safe failure/recovery test. Until then it remains `PENDING MANUAL ENABLEMENT`.

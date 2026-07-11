@@ -59,4 +59,4 @@ There are no automatic down migrations. Migration 004 keeps legacy event writes 
 
 ## Rollback Drill
 
-The Linux operations test creates temporary releases, deploys through fake command boundaries, forces post-switch acceptance failure, and proves that `current` returns to the original target. It also proves a failed manual rollback restores its starting target. The real Postgres CI job separately exercises backup and disposable restore.
+The Linux operations test creates temporary releases, deploys through fake command boundaries, forces post-switch acceptance failure, and proves that `current` returns to the original target. It also proves a failed manual rollback restores its starting target. Before production use, separately exercise backup and disposable restore against a non-production PostgreSQL environment.

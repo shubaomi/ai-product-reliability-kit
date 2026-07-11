@@ -2,7 +2,7 @@
 
 AI Product Reliability Kit is a local-first reliability control plane for small teams operating AI-built products. It combines a formal product contract, evidence-aware scanner, production server SDKs, an environment-isolated operations Dashboard, structured monitoring and incident workflows, and PM2/Nginx/PostgreSQL release tooling.
 
-The production V1 implementation and its verification assets are present in this repository. That does **not** mean this checkout has been deployed, that external monitoring is active, or that configured Linux-only CI gates have passed for an unpushed worktree. Treat a gate as passed only when its result is recorded for the exact revision; activation steps and remaining evidence are explicit in [docs/production.md](docs/production.md) and [docs/production-readiness-report.md](docs/production-readiness-report.md).
+The production V1 implementation and its verification assets are present in this repository. That does **not** mean this checkout has been deployed, that external monitoring is active, or that manual Linux-only validation has passed for the current revision. Treat a gate as passed only when its result is recorded for the exact revision; activation steps and remaining evidence are explicit in [docs/production.md](docs/production.md) and [docs/production-readiness-report.md](docs/production-readiness-report.md).
 
 ## What Is Included
 
@@ -17,7 +17,7 @@ The production V1 implementation and its verification assets are present in this
 
 ## Local Setup
 
-Prerequisites: Node.js 20+ (CI uses 22), npm, and Python 3.10+ for the Python SDK tests. Java 17+ and Maven are required for the Java contract.
+Prerequisites: Node.js 20+ (production uses 22), npm, and Python 3.10+ for the Python SDK tests. Java 17+ and Maven are required for the Java contract.
 
 ```bash
 npm ci
@@ -105,7 +105,7 @@ npm run test:e2e
 mvn -f sdks/java/pom.xml verify
 ```
 
-Real PostgreSQL, Linux symlink rollback, ShellCheck, and Nginx validation are executable CI gates. If they have not run for the current revision, treat them as unverified—not implied by local Windows success.
+Real PostgreSQL, Linux symlink rollback, ShellCheck, and Nginx validation require a Linux environment and must be run manually before production. If they have not run for the current revision, treat them as unverified—not implied by local Windows success.
 
 ## Documentation
 

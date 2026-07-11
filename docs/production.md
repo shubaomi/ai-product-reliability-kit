@@ -106,7 +106,7 @@ Defaults come from `apps/dashboard/src/config.mjs`. Review them rather than copy
 
 The migration runner applies four ordered files. Migration 003 converts legacy free-form alert rows only into a disabled compatibility representation. It preserves the original condition and writes `config.migration_advice`; review and recreate each rule with an explicit environment and supported structured type. Do not simply enable the migrated row.
 
-Migration 004 introduces replay protection keyed by `product_id + environment + idempotency_key` for every telemetry type, preserves legacy event writes through a compatibility trigger, backfills alert-instance rule types, archives duplicate legacy status pages before adding one-row-per-product uniqueness, and adds retention indexes. These are forward-only changes; verify them on a copy/CI service and retain compatibility with the previous application release before production deployment.
+Migration 004 introduces replay protection keyed by `product_id + environment + idempotency_key` for every telemetry type, preserves legacy event writes through a compatibility trigger, backfills alert-instance rule types, archives duplicate legacy status pages before adding one-row-per-product uniqueness, and adds retention indexes. These are forward-only changes; verify them on a production-like copy and retain compatibility with the previous application release before production deployment.
 
 ## Atomic Deployment
 
@@ -211,8 +211,8 @@ PENDING MANUAL ENABLEMENT
 
 Translate/import it into the selected external uptime provider, configure at least two external regions and a notification destination, then test failure and recovery. Do not change the activation status or claim external coverage until a human verifies polling from outside the platform host. No provider has been contacted by repository automation.
 
-## CI and Acceptance
+## Manual Validation and Acceptance
 
-The root Linux workflow runs deterministic Node installs, SDK packaging/install checks, Python tests, a real Java Maven contract, Postgres integration and backup/restore drill, Playwright desktop/mobile workflows, npm audit, Bash syntax, ShellCheck, and `nginx -t`. CI does not deploy.
+This repository intentionally has no GitHub Actions workflow. Before deployment, run the applicable deterministic installs, SDK/package checks, PostgreSQL integration and backup/restore drill, Playwright, audit, Bash/ShellCheck, and `nginx -t` checks on an appropriate Linux environment. These checks do not deploy.
 
 Use `docs/deployment-acceptance.md` for the preflight, post-deploy, rollback, backup, Nginx, and external-monitor checklist. Use `docs/runbook.md` during normal operations.

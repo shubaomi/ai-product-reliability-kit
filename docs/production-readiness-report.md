@@ -5,7 +5,7 @@
 **Production topology:** `reliability.hihongrun.com` → Nginx → `127.0.0.1:8787` → PM2 API + independent Worker → PostgreSQL<br>
 **Activation status:** **LOCALLY VERIFIED; NOT DEPLOYED OR PRODUCTION-AUTHORIZED**
 
-This report distinguishes implemented behavior from execution evidence. Repository assets do not prove that an unpushed revision passed GitHub Actions, that a production host is configured, or that an external provider is polling.
+This report distinguishes implemented behavior from execution evidence. Repository assets do not prove that a manual Linux/real-service validation suite ran for the exact revision, that a production host is configured, or that an external provider is polling.
 
 ## Requirement-to-Evidence Verdict
 
@@ -18,13 +18,13 @@ This report distinguishes implemented behavior from execution evidence. Reposito
 | Incidents | Open/acknowledge/assign/link/resolve/reopen, owner, severity, timeline, linked alerts, mandatory recovery note, state impact, incident package | `incident-lifecycle.mjs`, incident/API tests, Dashboard E2E | Implemented and locally behavior-tested |
 | Security | Strict production config; product key reveal/hash/scope/expiry/rotation/revocation/use; cross-product 403 and product-envelope consistency; validation/privacy; trusted proxy/rate buckets; SSRF; bounded secret-free audit coverage; liveness/readiness | `config.mjs`, `security.mjs`, `validation.mjs`, Phase 2/7 security and audit tests | Implemented; current full regression result belongs in the final ledger |
 | Contract and CLI | Formal YAML + JSON Schema, v1.x negotiation, deprecation/migration advice, evidence levels, exclusions, safe verify, honest placeholder score, scan-only upload | `standard/src`, schemas/fixtures, CLI scanner/verify tests | Implemented and locally behavior-tested |
-| Persistence and retention | Four ordered migrations, migration ledger/checksum/transaction/advisory lock, environment-scoped all-type ingest deduplication, legacy upgrade compatibility, PostgreSQL stores, transactional daily rollup/raw cleanup, API/worker lease | migrations/store/retention code and integration tests; real service job in CI | Implemented; real PostgreSQL execution for the exact revision is CI-gated |
-| Backup and restore | Custom `pg_dump`, archive/checksum verify, destructive confirmation, exact DB confirmation, disposable restore drill, pruning, cron template | `scripts/ops/*`, operations boundary tests, PostgreSQL CI job | Implemented; command boundaries tested locally, real tools CI-gated |
+| Persistence and retention | Four ordered migrations, migration ledger/checksum/transaction/advisory lock, environment-scoped all-type ingest deduplication, legacy upgrade compatibility, PostgreSQL stores, transactional daily rollup/raw cleanup, API/worker lease | migrations/store/retention code and integration tests; manual PostgreSQL validation before production | Implemented; real PostgreSQL execution for the exact revision is a manual gate |
+| Backup and restore | Custom `pg_dump`, archive/checksum verify, destructive confirmation, exact DB confirmation, disposable restore drill, pruning, cron template | `scripts/ops/*`, operations boundary tests, manual PostgreSQL drill | Implemented; command boundaries tested locally, real tools require manual validation |
 | Dashboard | YAML/manual schema-validated onboarding, ingest-only reveal-once key, Node/Python/Java snippets, keyed write/operator readback, first monitor, action queue, environment detail/signals, alert-linked incident operations, passport provenance, key/publication controls, public redaction, deterministic responsive states | public UI, API tests, desktop/mobile Playwright | Implemented; current desktop/mobile result belongs in the final ledger |
 | SDKs | Node/Python/Java packages with bounded queues, idempotency, timeout/backoff/jitter, requeue, fail-open, drop counts, close flush, v1.x fixtures | SDK sources and behavior/contract tests | Implemented and locally tested/built |
 | Deployment | Prepared/activated releases, atomic current/previous links, diagnostic failed-release marker, verified backup, compatible migration, two-process PM2 reload/stability acceptance, automatic/manual rollback, retention, graceful signals | `deploy.sh`, `rollback.sh`, PM2 ecosystem, ops tests, docs | Implemented; current local ops regression plus real symlink/host execution remain separately evidenced |
 | External monitoring | Provider-neutral liveness/readiness, two-region and notification requirements, safe test steps | `deploy/monitoring/external-monitor.example.yml` | Asset complete; **PENDING MANUAL ENABLEMENT** |
-| CI | Lockfiles, Node/Python/Java, real PostgreSQL, backup/restore, Playwright, audits, Bash/ShellCheck, deployment simulations, Nginx validation | `.github/workflows/ci.yml`, parsed workflow, ops CI-contract test | Configured; not run remotely for this unpushed worktree |
+| Continuous CI | No GitHub Actions workflow is intentionally configured | README and deployment-acceptance manual commands | Manual Linux/real-service validation is required before production |
 
 ## Explicit Acceptance Cases
 
@@ -39,11 +39,11 @@ This report distinguishes implemented behavior from execution evidence. Reposito
 | Independent monitor interval is effective | Scheduler integration tests |
 | Placeholder example is below 100 | CLI scanner regression test and final scan command |
 | v1.0 remains usable after v1.1 compatibility work | Shared fixtures plus Standard/Node/Python/Java contracts |
-| Backup can restore and verify | Local fake command-boundary test; real PostgreSQL CI restore drill configured |
-| Failed deployment restores prior release | Linux symlink simulation configured in operations CI; Windows host skips it honestly |
+| Backup can restore and verify | Local fake command-boundary test; real PostgreSQL restore drill is a required manual pre-production check |
+| Failed deployment restores prior release | Linux symlink simulation must run manually on a Linux host; Windows host skips it honestly |
 | Same idempotency key is isolated by environment and deduplicates every telemetry type | Phase 7 integrity test plus migration 004 real-PostgreSQL assertions |
 | Legacy free-form alerts are preserved but disabled with migration advice | Migration 003 compatibility assertions and operator documentation |
-| Onboarding validates YAML/manual contracts, uses an ingest-only product key, proves readback, and registers the first monitor | Dashboard API tests and desktop/mobile Playwright workflow |
+| Onboarding validates YAML/manual contracts, uses an ingest-only product key, proves readback, and registers the first monitor | Dashboard API tests and desktop/mobile Playwright tests |
 
 ## Final Remediation Evidence
 
@@ -71,28 +71,28 @@ Final local snapshot completed at `2026-07-11T17:24Z` on Windows with Node `22.2
 | `npm audit --audit-level=high` at root plus production audits for Dashboard, Standard, CLI, Automation, Node SDK | All six exited 0 with 0 low/moderate/high/critical vulnerabilities. | PASS |
 | `npm run scan:example` | Placeholder example scored `55.5/100 (C)`, with 1 verified, 7 detected, 4 declared and overall verification `unverified`; no false 100. | PASS |
 | Git Bash `bash -n deploy.sh rollback.sh scripts/ops/*.sh` | Exit 0. | PASS |
-| Syntax/config parses | Node syntax: 61 files, 0 failures; JSON: 21 files, 0 failures; YAML: workflow, Dependabot, Compose, external monitor all parsed. | PASS |
+| Syntax/config parses | Node syntax: 61 files, 0 failures; JSON: 21 files, 0 failures; YAML: Dependabot, Compose, and external monitor parsed. | PASS |
 | Documentation audit | 18 Markdown files checked; local relative links/fences/credential examples/migration and activation markers passed. | PASS |
 | Local Dashboard handoff | Temporary local JSON store at `http://127.0.0.1:8787`; `/healthz` and `/readyz` returned `ok: true`; `/` returned HTTP 200. | PASS |
 | `git diff --check` plus secret-pattern scan | No whitespace errors and no private-key/AWS/GitHub/OpenAI key pattern match; only Git's expected Windows LF/CRLF notices. | PASS |
-| Git provenance | `HEAD` and local `origin/main` both `e7e0a34d0fe6ca07be40c9ea63ada04fbe7a02eb`; no commit or push occurred. Initial worktree was clean; current changes are this goal's uncommitted work. | PASS |
+| Git provenance | Production V1 was committed as `1bd113861bbe64e6eb3b9590b3c653d09df63219`; verify the intended clean source revision on the server before deployment. | Manual preflight required |
 
-The following are configured gates, not executed-local passes:
+The following require a Linux or real-service environment and are not local passes:
 
-| Linux/real-service gate | Why local execution is absent | CI evidence path |
+| Linux/real-service gate | Why local execution is absent | Manual evidence path |
 | --- | --- | --- |
-| Real PostgreSQL fresh concurrent migrations, 001/002 legacy upgrade, constraints/ownership, all-type replay, deferred first-contact product ingest, retention concurrency/UTC, and query behavior | No `APR_TEST_DATABASE_URL`, Docker, `psql`, or local PostgreSQL | `postgres-integration` service job runs `test:postgres` before the idempotent CLI migration. |
-| Real `pg_dump` / `pg_restore` backup and disposable restore | PostgreSQL client/service unavailable | CI seeds exact product/event sentinels, backs up, verifies, restores to a disposable DB, and fails if either sentinel is absent. |
-| Atomic symlink deployment plus reload/HTTP/worker/save failure rollback, manual rollback, incomplete-target rejection, and shared `flock` | Windows cannot express the Linux symlink semantics used by production | The 8 locally skipped operations tests run on Ubuntu. |
-| ShellCheck and complete `nginx -t` | `shellcheck` and Nginx are not installed | `operations` job installs both, runs ShellCheck, creates temporary TLS material, and validates the complete Nginx config. |
-| Remote GitHub Actions result for this exact worktree | No commit/push is authorized | Must be run after an authorized commit/push; the workflow itself has only been parsed locally. |
+| Real PostgreSQL fresh concurrent migrations, 001/002 legacy upgrade, constraints/ownership, all-type replay, deferred first-contact product ingest, retention concurrency/UTC, and query behavior | No `APR_TEST_DATABASE_URL`, Docker, `psql`, or local PostgreSQL | Run `npm --prefix apps/dashboard run test:postgres` against a dedicated non-production PostgreSQL database. |
+| Real `pg_dump` / `pg_restore` backup and disposable restore | PostgreSQL client/service unavailable | Seed non-production sentinel data, then run the backup, verify, and disposable restore drill scripts manually. |
+| Atomic symlink deployment plus reload/HTTP/worker/save failure rollback, manual rollback, incomplete-target rejection, and shared `flock` | Windows cannot express the Linux symlink semantics used by production | Run the operations simulation on a Linux host before production use. |
+| ShellCheck and complete `nginx -t` | `shellcheck` and Nginx are not installed | Install the tools on a Linux host, run ShellCheck, then validate the complete Nginx config. |
+| Exact revision validation | No continuous GitHub Actions workflow is configured | Pull the reviewed clean commit on the server and record the manual validation results before deployment. |
 
-Do not convert any configured gate into a passed claim until it runs for the exact revision.
+Do not convert any manual gate into a passed claim until it runs for the exact revision.
 
 ## Known Limitations and Honest Gaps
 
 - This Windows host has no local PostgreSQL service/Docker, Nginx, ShellCheck, PM2, or usable Linux symlink semantics. Those checks are not locally passed.
-- The configured GitHub Actions workflow has not run because the user did not authorize a commit/push.
+- No continuous GitHub Actions workflow is configured; Linux and real-service verification are manual pre-deployment responsibilities.
 - SDK queues are bounded process memory and fail-open; they are not durable brokers.
 - Production intentionally uses one API process on fixed port 8787 and one leased Worker. Horizontal/multi-region availability is conditional on measured need.
 - Retention uses indexes and daily aggregates, not speculative table partitioning.
@@ -102,7 +102,7 @@ Do not convert any configured gate into a passed claim until it runs for the exa
 
 ## Manual Production Actions
 
-1. Review this diff and run the root Linux CI workflow for the exact revision.
+1. Review the exact source revision on a Linux host and run the applicable manual validation commands before deployment.
 2. Provision PostgreSQL and least-privilege roles; perform and record a disposable restore drill.
 3. Create `/data/prod/ai-product-reliability-kit/.env.production` as a regular mode-0600 file with distinct generated secrets, valid PBKDF2 hash, trusted proxy, canonical URL/binding, and no placeholder values.
    Review every optional limit/allowlist/retention/webhook setting in `docs/production.md`; do not add an SSRF hostname exception casually.
@@ -127,4 +127,4 @@ Do not convert any configured gate into a passed claim until it runs for the exa
 
 ## Go-Live Decision
 
-Repository implementation has completed the locally available verification matrix and is ready for user review. Production go-live remains **NO-GO** until Linux CI passes for an authorized exact revision and the manual production/external-monitor checklist is completed by an authorized operator.
+Repository implementation has completed the locally available verification matrix and is ready for user review. Production go-live remains **NO-GO** until manual Linux/real-service validation passes for the exact revision and the manual production/external-monitor checklist is completed by an authorized operator.

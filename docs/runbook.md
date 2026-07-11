@@ -233,7 +233,7 @@ The repository config remains `PENDING MANUAL ENABLEMENT` until an operator impo
 - Weekly: verify a backup, review release/backup retention, inspect product-key `last_used_at`/expiry, and sample sensitive-operation audit records.
 - After schema or restore-tool changes: perform a disposable restore drill and inspect disabled legacy-rule migration advice plus the migration ledger.
 - After Nginx/TLS changes: run `nginx -t`, local checks, public checks, and an external monitor test.
-- After deployment-tool changes: run the sandbox rollback simulation in CI before production use.
+- After deployment-tool changes: run the sandbox rollback simulation on a Linux host before production use.
 
 ## Evidence to Capture
 

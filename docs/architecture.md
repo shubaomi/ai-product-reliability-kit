@@ -40,7 +40,7 @@ flowchart LR
 | Stores | Memory and atomic JSON for local work; PostgreSQL for production | Operational queries always accept product/environment filters |
 | Dashboard | YAML/manual validated onboarding, keyed connectivity, action queue, product detail, incident operations, passport, key/publication controls | Client consumes server-derived state; it does not infer missing health as operational |
 | Automation | Generates monitors, the four alert-rule types, a public-status draft, and incident-package template | Provider-neutral; no external service is contacted |
-| Operations | Prepared/activated releases, atomic links, backup/restore/drill, two-process PM2, rollback and CI gates | No production deploy or external monitor activation occurs from CI |
+| Operations | Prepared/activated releases, atomic links, backup/restore/drill, two-process PM2, rollback, and manual Linux validation | No production deploy or external monitor activation occurs from repository automation |
 
 ## Runtime State Model
 

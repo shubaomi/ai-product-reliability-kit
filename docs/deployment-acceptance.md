@@ -1,8 +1,8 @@
 # Deployment Acceptance Checklist
 
-This checklist separates CI evidence, manual preparation, scripted deployment, and external activation. Checking a box must reflect observed evidence.
+This checklist separates manual validation, preparation, scripted deployment, and external activation. Checking a box must reflect observed evidence.
 
-## CI Gate
+## Pre-deploy Validation
 
 - [ ] Root, Dashboard, Standard, CLI, Automation, and Node SDK lockfiles install with `npm ci`.
 - [ ] Node and Python suites pass.
@@ -12,7 +12,7 @@ This checklist separates CI evidence, manual preparation, scripted deployment, a
 - [ ] Playwright desktop and mobile projects pass.
 - [ ] `npm audit` gates pass at the configured severity.
 - [ ] `bash -n` and ShellCheck pass for deploy, rollback, and operations scripts.
-- [ ] The complete Nginx config passes `nginx -t` in Linux CI.
+- [ ] The complete Nginx config passes `nginx -t` on a production-like Linux host.
 - [ ] Deployment failure simulation proves automatic previous-release restoration.
 
 ## Manual Preflight

@@ -26,10 +26,10 @@ Verdict labels:
 | Scanner | Placeholder example scores 100/100; YAML is regex parsed; source/doc text is full-credit evidence; `--verify` does not exist | P0; implement schema-backed contracts and honest declared/detected/verified evidence. |
 | Protocol | Collector accepts exactly `1.0`; `1.1` and `1.9` fail like unknown major versions | P0 compatibility failure; support v1.x and distinguish unknown major. |
 | SDKs | Node/Python/Java queues are unbounded and lack the required resilience contract; Node loses a batch on network rejection | P0; all three languages have active-project evidence and require production clients. |
-| Data | Startup replays one `001_initial.sql`; Postgres test searches SQL text | P0; implement versioned locked migrations and real Postgres CI integration. |
+| Data | Startup replays one `001_initial.sql`; Postgres test searches SQL text | P0; implement versioned locked migrations and require real Postgres validation before production. |
 | Dashboard | Single fleet table and cumulative metrics; no onboarding, environment detail, incident operations, passport, or publication controls | Required product work, not documentation-only. |
 | Deployment | Direct rsync into live path plus `pm2 delete`; no backup, atomic switch, automatic rollback, or release retention | P0 production-readiness gap. |
-| CI/tooling | No root workflow/lockfile/Playwright; Java and Postgres checks match source text | Required. Git Bash is locally usable; Docker/Postgres/Nginx/ShellCheck/PM2 and a working JDK are not currently local. |
+| Validation/tooling | No root workflow/lockfile/Playwright; Java and Postgres checks match source text | Require lockfiles, Playwright, and reproducible manual Linux/Postgres checks before production. Git Bash is locally usable; Docker/Postgres/Nginx/ShellCheck/PM2 and a working JDK are not currently local. |
 
 ## Required Implementation
 
@@ -94,8 +94,8 @@ Verdict labels:
 | Versioned migrations | Required: ordered files, `schema_migrations`, transaction, advisory lock, checksum/identity | Concurrent migration and upgrade tests on real Postgres |
 | Retention and aggregates | Required configurable raw retention, cleanup task, and only the aggregates needed by state/alerts/UI | Retention integration test |
 | Partitioning | Not required without data-scale evidence | No speculative partition subsystem |
-| Backup/restore | Required `pg_dump`, restore, verification, drill, retention, cron example, and runbook | Linux/Postgres CI smoke plus documented manual full drill |
-| Real Postgres integration | Required in CI for migrations, constraints, transactions, queries, retention, backup/restore, and concurrency | No SQL-source matching accepted as substitute |
+| Backup/restore | Required `pg_dump`, restore, verification, drill, retention, cron example, and runbook | Linux/Postgres manual smoke plus documented full drill |
+| Real Postgres integration | Required before production for migrations, constraints, transactions, queries, retention, backup/restore, and concurrency | No SQL-source matching accepted as substitute |
 
 ### 7. Actionable Dashboard
 
@@ -131,11 +131,11 @@ Verdict labels:
 | Complete Nginx/runbook/checklist | Required | Full copy-paste config and validation commands |
 | External monitoring | Required provider-neutral config plus manual enablement steps | Clearly marked `PENDING MANUAL ENABLEMENT` until externally configured |
 
-### 10. Testing, CI, Documentation, and Handoff
+### 10. Testing, Manual Validation, Documentation, and Handoff
 
 | Requirement | Resolution | Acceptance evidence |
 | --- | --- | --- |
-| Root CI | Required with deterministic installs/lockfiles, Node, Python, Java, Postgres, Playwright, dependency/security, Bash/ShellCheck, and feasible Nginx checks | Root Linux workflow |
+| Continuous CI | Not required: the user deploys by pulling a reviewed commit on the server. Run deterministic installs/lockfiles, Node, Python, Java, Postgres, Playwright, dependency/security, Bash/ShellCheck, and Nginx checks manually on Linux before production. | Deployment acceptance checklist and recorded results |
 | Failure-first behavior tests | Required for every new behavior | Each implementation batch begins from a reproduced failing assertion |
 | Explicit acceptance list | Required without substitutions | Final matrix in readiness report |
 | Full suites and honest environment gaps | Required | Exact command/result ledger; local gaps are not labelled verified |
@@ -152,7 +152,7 @@ Verdict labels:
 | Additional language SDKs | Trigger only when a real active project uses the language. Current evidence requires Node/Python/Java only. |
 | Multiple scheduler workers | Architecture must be safe if enabled; Postgres advisory lock is required. Do not add distributed orchestration beyond that. |
 | External uptime service | Generate neutral config and manual steps only. Actual external activation remains unauthorized. |
-| Local-only unavailable tools | Use Linux CI where executable; otherwise list as a manual production-readiness action. Never claim local verification. |
+| Local-only unavailable tools | Use a Linux or production-like validation environment where executable; otherwise list as a manual production-readiness action. Never claim local verification. |
 
 ## Explicitly Not in Scope
 

@@ -16,7 +16,7 @@ All notable repository changes are documented here. Versions follow the individu
 - Independent API and Worker entry points plus a two-process PM2 ecosystem.
 - Action-first responsive Dashboard with imported/manual validated onboarding, reveal-once ingest-only product key, Node/Python/Java `APR_PRODUCT_API_KEY` snippets, keyed connectivity/readback, first monitor, alert-linked incidents, passport/public status, and desktop/mobile Playwright coverage.
 - PostgreSQL backup, verification, guarded restore, disposable restore drill, backup/release retention, cron template, atomic deploy, independent rollback, and provider-neutral external-monitor template.
-- Root Linux CI for deterministic installs, Node/Python/Java/PostgreSQL/Playwright contracts, dependency audit, Bash/ShellCheck, deployment simulations, and Nginx syntax.
+- Manual Linux validation guidance for deterministic installs, Node/Python/Java/PostgreSQL/Playwright contracts, dependency audit, Bash/ShellCheck, deployment simulations, and Nginx syntax.
 - Production readiness, deployment acceptance, and requirement-verdict documentation.
 
 ### Changed
