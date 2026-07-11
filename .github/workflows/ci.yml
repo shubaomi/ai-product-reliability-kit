@@ -28,7 +28,7 @@ jobs:
             cli/package-lock.json
             automation/package-lock.json
             sdks/node/package-lock.json
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - run: npm ci
