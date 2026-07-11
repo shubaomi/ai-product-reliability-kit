@@ -213,6 +213,6 @@ Translate/import it into the selected external uptime provider, configure at lea
 
 ## Manual Validation and Acceptance
 
-This repository intentionally has no GitHub Actions workflow. Before deployment, run the applicable deterministic installs, SDK/package checks, PostgreSQL integration and backup/restore drill, Playwright, audit, Bash/ShellCheck, and `nginx -t` checks on an appropriate Linux environment. These checks do not deploy.
+This repository intentionally has no GitHub automation. Before deployment, run the applicable deterministic installs, SDK/package checks, PostgreSQL integration and backup/restore drill, Playwright, audit, Bash/ShellCheck, and `nginx -t` checks on an appropriate Linux environment. These checks do not deploy.
 
 Use `docs/deployment-acceptance.md` for the preflight, post-deploy, rollback, backup, Nginx, and external-monitor checklist. Use `docs/runbook.md` during normal operations.

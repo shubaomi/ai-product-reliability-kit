@@ -24,7 +24,7 @@ This report distinguishes implemented behavior from execution evidence. Reposito
 | SDKs | Node/Python/Java packages with bounded queues, idempotency, timeout/backoff/jitter, requeue, fail-open, drop counts, close flush, v1.x fixtures | SDK sources and behavior/contract tests | Implemented and locally tested/built |
 | Deployment | Prepared/activated releases, atomic current/previous links, diagnostic failed-release marker, verified backup, compatible migration, two-process PM2 reload/stability acceptance, automatic/manual rollback, retention, graceful signals | `deploy.sh`, `rollback.sh`, PM2 ecosystem, ops tests, docs | Implemented; current local ops regression plus real symlink/host execution remain separately evidenced |
 | External monitoring | Provider-neutral liveness/readiness, two-region and notification requirements, safe test steps | `deploy/monitoring/external-monitor.example.yml` | Asset complete; **PENDING MANUAL ENABLEMENT** |
-| Continuous CI | No GitHub Actions workflow is intentionally configured | README and deployment-acceptance manual commands | Manual Linux/real-service validation is required before production |
+| GitHub automation | No GitHub Actions or Dependabot configuration is intentionally configured | README and deployment-acceptance manual commands | Manual Linux/real-service validation is required before production |
 
 ## Explicit Acceptance Cases
 
@@ -71,7 +71,7 @@ Final local snapshot completed at `2026-07-11T17:24Z` on Windows with Node `22.2
 | `npm audit --audit-level=high` at root plus production audits for Dashboard, Standard, CLI, Automation, Node SDK | All six exited 0 with 0 low/moderate/high/critical vulnerabilities. | PASS |
 | `npm run scan:example` | Placeholder example scored `55.5/100 (C)`, with 1 verified, 7 detected, 4 declared and overall verification `unverified`; no false 100. | PASS |
 | Git Bash `bash -n deploy.sh rollback.sh scripts/ops/*.sh` | Exit 0. | PASS |
-| Syntax/config parses | Node syntax: 61 files, 0 failures; JSON: 21 files, 0 failures; YAML: Dependabot, Compose, and external monitor parsed. | PASS |
+| Syntax/config parses | Node syntax: 61 files, 0 failures; JSON: 21 files, 0 failures; YAML: Compose and external monitor parsed. | PASS |
 | Documentation audit | 18 Markdown files checked; local relative links/fences/credential examples/migration and activation markers passed. | PASS |
 | Local Dashboard handoff | Temporary local JSON store at `http://127.0.0.1:8787`; `/healthz` and `/readyz` returned `ok: true`; `/` returned HTTP 200. | PASS |
 | `git diff --check` plus secret-pattern scan | No whitespace errors and no private-key/AWS/GitHub/OpenAI key pattern match; only Git's expected Windows LF/CRLF notices. | PASS |
@@ -85,14 +85,14 @@ The following require a Linux or real-service environment and are not local pass
 | Real `pg_dump` / `pg_restore` backup and disposable restore | PostgreSQL client/service unavailable | Seed non-production sentinel data, then run the backup, verify, and disposable restore drill scripts manually. |
 | Atomic symlink deployment plus reload/HTTP/worker/save failure rollback, manual rollback, incomplete-target rejection, and shared `flock` | Windows cannot express the Linux symlink semantics used by production | Run the operations simulation on a Linux host before production use. |
 | ShellCheck and complete `nginx -t` | `shellcheck` and Nginx are not installed | Install the tools on a Linux host, run ShellCheck, then validate the complete Nginx config. |
-| Exact revision validation | No continuous GitHub Actions workflow is configured | Pull the reviewed clean commit on the server and record the manual validation results before deployment. |
+| Exact revision validation | No GitHub automation is configured | Pull the reviewed clean commit on the server and record the manual validation results before deployment. |
 
 Do not convert any manual gate into a passed claim until it runs for the exact revision.
 
 ## Known Limitations and Honest Gaps
 
 - This Windows host has no local PostgreSQL service/Docker, Nginx, ShellCheck, PM2, or usable Linux symlink semantics. Those checks are not locally passed.
-- No continuous GitHub Actions workflow is configured; Linux and real-service verification are manual pre-deployment responsibilities.
+- No GitHub automation is configured; Linux and real-service verification are manual pre-deployment responsibilities.
 - SDK queues are bounded process memory and fail-open; they are not durable brokers.
 - Production intentionally uses one API process on fixed port 8787 and one leased Worker. Horizontal/multi-region availability is conditional on measured need.
 - Retention uses indexes and daily aggregates, not speculative table partitioning.
