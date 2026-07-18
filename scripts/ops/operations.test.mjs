@@ -277,23 +277,23 @@ test("release retention removes only releases beyond the configured newest set",
   assert.deepEqual((await fs.readdir(releasesDir)).sort(), ["20260103-c", "20260104-d"]);
 });
 
-test("root Linux CI contains executable production gates", async () => {
-  const workflow = await fs.readFile(path.join(repoRoot, ".github/workflows/ci.yml"), "utf8");
+test("manual Linux validation documents production gates without GitHub automation", async () => {
+  const workflowDirectory = path.join(repoRoot, ".github/workflows");
+  const workflowFiles = await fs.readdir(workflowDirectory).catch((error) => {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  });
+  const acceptance = await fs.readFile(path.join(repoRoot, "docs/deployment-acceptance.md"), "utf8");
+  const serverGuide = await fs.readFile(path.join(repoRoot, "docs/server-deployment-guide.md"), "utf8");
+  const manualValidation = `${acceptance}\n${serverGuide}`;
   const packageLock = JSON.parse(await fs.readFile(path.join(repoRoot, "package-lock.json"), "utf8"));
 
   assert.equal(packageLock.lockfileVersion >= 3, true);
-  for (const required of ["postgres:16", "npm ci", "npm pack --dry-run", "pip install ./sdks/python", "playwright", "mvn", "shellcheck", "nginx -t", "npm audit", "restore-drill.sh"]) {
-    assert.match(workflow, new RegExp(escapeRegExp(required)), `CI is missing ${required}`);
+  assert.deepEqual(workflowFiles.filter((name) => /\.ya?ml$/i.test(name)), []);
+  await assert.rejects(fs.access(path.join(repoRoot, ".github/dependabot.yml")), { code: "ENOENT" });
+  for (const required of ["npm ci", "test:postgres", "test:e2e", "mvn", "shellcheck", "nginx -t", "npm audit", "restore drill", "previous-release restoration"]) {
+    assert.match(manualValidation, new RegExp(escapeRegExp(required), "i"), `Manual validation is missing ${required}`);
   }
-  assert.match(workflow, /ci-restore-sentinel/);
-  assert.match(workflow, /telemetry_events/);
-  assert.match(workflow, /case when exists/i);
-  const postgresTestIndex = workflow.indexOf("npm --prefix apps/dashboard run test:postgres");
-  const migrateIndex = workflow.indexOf("npm --prefix apps/dashboard run migrate");
-  const sentinelIndex = workflow.indexOf("ci-restore-sentinel");
-  assert.equal(postgresTestIndex >= 0 && postgresTestIndex < migrateIndex && migrateIndex < sentinelIndex, true);
-  const playwrightJob = workflow.slice(workflow.indexOf("  playwright:"), workflow.indexOf("  operations:"));
-  assert.match(playwrightJob, /standard\/package-lock\.json/);
 });
 
 async function createFixture(t, options = {}) {

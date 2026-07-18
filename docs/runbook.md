@@ -125,7 +125,7 @@ List and verify recent backups:
 ```bash
 ls -lht /data/prod/ai-product-reliability-kit/shared/backups
 BACKUP_FILE=/data/prod/ai-product-reliability-kit/shared/backups/apr-....dump \
-  /data/prod/ai-product-reliability-kit/current/scripts/ops/verify-backup.sh
+  /bin/bash /data/prod/ai-product-reliability-kit/current/scripts/ops/verify-backup.sh
 ```
 
 A file existing is not sufficient evidence. Verification requires its checksum and a readable custom-format archive. Perform the disposable restore drill after database changes and at the documented operating cadence:
@@ -134,7 +134,7 @@ A file existing is not sufficient evidence. Verification requires its checksum a
 BACKUP_FILE=/secure/path/apr-backup.dump \
 DATABASE_ADMIN_URL='postgresql://.../postgres' \
 DRILL_VERIFY_SQL='select count(*) from schema_migrations' \
-  /data/prod/ai-product-reliability-kit/current/scripts/ops/restore-drill.sh
+  /bin/bash /data/prod/ai-product-reliability-kit/current/scripts/ops/restore-drill.sh
 ```
 
 Never point a drill at the production database. `restore-postgres.sh` requires `RESTORE_ALLOW_DESTRUCTIVE=YES` and exact database-name confirmation.
@@ -154,7 +154,7 @@ A production restore is a maintenance-window operation, not a live repair. Keep 
    BACKUP_DIR=/data/prod/ai-product-reliability-kit/shared/backups \
    BACKUP_RETENTION_DAYS=14 \
    BACKUP_LABEL=prerestore \
-     /data/prod/ai-product-reliability-kit/current/scripts/ops/backup-postgres.sh
+     /bin/bash /data/prod/ai-product-reliability-kit/current/scripts/ops/backup-postgres.sh
    ```
 
    Verify the emitted backup path and checksum/archive before proceeding.
@@ -180,7 +180,7 @@ A production restore is a maintenance-window operation, not a live repair. Keep 
    RESTORE_DATABASE_URL="$DATABASE_URL" \
    RESTORE_CONFIRM_DATABASE='<exact database name from DATABASE_URL>' \
    RESTORE_ALLOW_DESTRUCTIVE=YES \
-     /data/prod/ai-product-reliability-kit/current/scripts/ops/restore-postgres.sh
+     /bin/bash /data/prod/ai-product-reliability-kit/current/scripts/ops/restore-postgres.sh
    ```
 
 5. Validate the restored data before allowing writes, then start both roles from the fixed production ecosystem and run acceptance:
@@ -207,7 +207,7 @@ Rollback when a new release fails readiness, causes a confirmed regression, or c
 
 ```bash
 cd /data/claude_project/ai-product-reliability-kit
-./rollback.sh
+/bin/bash ./rollback.sh
 ```
 
 See `docs/rollback.md` for target selection and failure recovery. Database rollback is not automatic; confirm the previous application remains compatible with the applied migration.

@@ -17,6 +17,7 @@ All notable repository changes are documented here. Versions follow the individu
 - Action-first responsive Dashboard with imported/manual validated onboarding, reveal-once ingest-only product key, Node/Python/Java `APR_PRODUCT_API_KEY` snippets, keyed connectivity/readback, first monitor, alert-linked incidents, passport/public status, and desktop/mobile Playwright coverage.
 - PostgreSQL backup, verification, guarded restore, disposable restore drill, backup/release retention, cron template, atomic deploy, independent rollback, and provider-neutral external-monitor template.
 - Manual Linux validation guidance for deterministic installs, Node/Python/Java/PostgreSQL/Playwright contracts, dependency audit, Bash/ShellCheck, deployment simulations, and Nginx syntax.
+- Start-to-finish Debian/Ubuntu server deployment guide covering service-account setup, PostgreSQL provisioning, protected production configuration, DNS/TLS/Nginx integration, PM2 startup, backup cron/logrotate, acceptance, routine releases, and rollback.
 - Production readiness, deployment acceptance, and requirement-verdict documentation.
 
 ### Changed

@@ -2,6 +2,8 @@
 
 The supported production topology is PM2 behind Nginx with Postgres. Docker Compose remains useful for local integration only; it is not the production release mechanism.
 
+If the server has not been prepared before, begin with the [Complete Server Deployment Guide](server-deployment-guide.md). It provides the ordered commands for packages, the `apr` account, PostgreSQL, protected configuration, DNS/TLS, Nginx, PM2 startup, backup cron, external monitoring, acceptance, later releases, and rollback. This document is the configuration and release-semantics reference used alongside that guide.
+
 ## Fixed Production Topology
 
 ```text
@@ -32,6 +34,8 @@ Release contents are prepared before activation and are not edited in place afte
 ## Manual One-Time Preparation
 
 These steps require an authorized operator. The deployment script does not install packages, modify Nginx, create the Postgres role/database, install cron, or activate an external monitoring provider.
+
+Use the [complete first-server sequence](server-deployment-guide.md) instead of treating the summary below as a standalone procedure.
 
 1. Install Node.js 22, npm, PM2, Nginx, rsync, PostgreSQL client tools, and `sha256sum` on the Linux host.
 2. Create the Postgres database and a least-privilege application role. Provision the required `pgcrypto` extension through an authorized database owner before relying on the application role for migrations.
@@ -114,7 +118,6 @@ From the source checkout:
 
 ```bash
 cd /data/claude_project/ai-product-reliability-kit
-chmod +x deploy.sh rollback.sh scripts/ops/*.sh
 ./deploy.sh
 ```
 
@@ -145,10 +148,10 @@ set +a
 
 BACKUP_DIR=/data/prod/ai-product-reliability-kit/shared/backups \
 BACKUP_RETENTION_DAYS=14 \
-/data/prod/ai-product-reliability-kit/current/scripts/ops/backup-postgres.sh
+/bin/bash /data/prod/ai-product-reliability-kit/current/scripts/ops/backup-postgres.sh
 
 BACKUP_FILE=/data/prod/ai-product-reliability-kit/shared/backups/apr-....dump \
-/data/prod/ai-product-reliability-kit/current/scripts/ops/verify-backup.sh
+/bin/bash /data/prod/ai-product-reliability-kit/current/scripts/ops/verify-backup.sh
 ```
 
 Restore is intentionally destructive and requires both an opt-in and the exact connected database name. Do not run it while either application writer is active. In an authorized maintenance window, first create a verified pre-restore backup, stop the worker and API, and confirm there are no unexpected database sessions. Then run:
@@ -158,7 +161,7 @@ BACKUP_FILE=/secure/path/apr-backup.dump \
 RESTORE_DATABASE_URL='postgresql://...' \
 RESTORE_CONFIRM_DATABASE='<exact database name from RESTORE_DATABASE_URL>' \
 RESTORE_ALLOW_DESTRUCTIVE=YES \
-/data/prod/ai-product-reliability-kit/current/scripts/ops/restore-postgres.sh
+/bin/bash /data/prod/ai-product-reliability-kit/current/scripts/ops/restore-postgres.sh
 ```
 
 If restore fails, keep both processes stopped and preserve the pre-restore backup. After success, inspect migrations and critical records, start both processes from the production PM2 ecosystem, verify local liveness/readiness and PM2 stability, and save PM2 state. The exact quiesce, inspection, restore, and restart sequence is in `docs/runbook.md`.
@@ -169,7 +172,7 @@ Prefer a disposable restore drill before any production restore:
 BACKUP_FILE=/secure/path/apr-backup.dump \
 DATABASE_ADMIN_URL='postgresql://.../postgres' \
 DRILL_VERIFY_SQL='select count(*) from schema_migrations' \
-/data/prod/ai-product-reliability-kit/current/scripts/ops/restore-drill.sh
+/bin/bash /data/prod/ai-product-reliability-kit/current/scripts/ops/restore-drill.sh
 ```
 
 The drill creates a uniquely named database, restores and verifies it, and removes it through an exit trap. Use `.pgpass` or another host-level secret mechanism where possible; never commit database URLs.
@@ -190,13 +193,13 @@ Automatic rollback runs when deployment fails after switching `current`. For an 
 
 ```bash
 cd /data/claude_project/ai-product-reliability-kit
-./rollback.sh
+/bin/bash ./rollback.sh
 ```
 
 By default, `rollback.sh` selects `previous`. Select an explicit retained release with:
 
 ```bash
-./rollback.sh --release 20260710T140000Z-abc123def456
+/bin/bash ./rollback.sh --release 20260710T140000Z-abc123def456
 ```
 
 The rollback script holds the same release-operation lock as deployment. It rejects releases marked `.deploy-failed` or missing the `.release-ready`, API, worker, or ecosystem files; creates a backup; switches `current`; reloads PM2; verifies liveness/readiness and both process uptimes; and restores the original release if rollback acceptance fails. It does not run down migrations. Every schema change must remain compatible with the prior application release for the documented retention window. See `docs/rollback.md`.

@@ -28,13 +28,13 @@ Select `previous` automatically:
 
 ```bash
 cd /data/claude_project/ai-product-reliability-kit
-./rollback.sh
+/bin/bash ./rollback.sh
 ```
 
 Or select a retained release explicitly:
 
 ```bash
-./rollback.sh --release <release-id>
+/bin/bash ./rollback.sh --release <release-id>
 ```
 
 The script acquires the same exclusive release-operation lock used by deployment, validates that the release resolves inside the releases directory and is complete, creates a pre-rollback backup, atomically switches `current`, reloads PM2, checks both platform endpoints, and proves that exactly one API and one worker remain online beyond their minimum uptime. On any failed post-switch operation it explicitly restores the original target and reloads it.

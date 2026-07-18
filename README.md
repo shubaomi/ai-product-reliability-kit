@@ -2,7 +2,7 @@
 
 AI Product Reliability Kit is a local-first reliability control plane for small teams operating AI-built products. It combines a formal product contract, evidence-aware scanner, production server SDKs, an environment-isolated operations Dashboard, structured monitoring and incident workflows, and PM2/Nginx/PostgreSQL release tooling.
 
-The production V1 implementation and its verification assets are present in this repository. That does **not** mean this checkout has been deployed, that external monitoring is active, or that manual Linux-only validation has passed for the current revision. Treat a gate as passed only when its result is recorded for the exact revision; activation steps and remaining evidence are explicit in [docs/production.md](docs/production.md) and [docs/production-readiness-report.md](docs/production-readiness-report.md).
+The production V1 implementation and its verification assets are present in this repository. That does **not** mean this checkout has been deployed, that external monitoring is active, or that manual Linux-only validation has passed for the current revision. Treat a gate as passed only when its result is recorded for the exact revision; start with the [complete server deployment guide](docs/server-deployment-guide.md), then use the [production reference](docs/production.md) and [readiness report](docs/production-readiness-report.md) for configuration and evidence.
 
 ## What Is Included
 
@@ -92,7 +92,14 @@ PostgreSQL
 
 Source is `/data/claude_project/ai-product-reliability-kit`; activated release application contents are not edited in place under `/data/prod/ai-product-reliability-kit/releases`, with atomic `current` and `previous` links. A failed release may receive only the documented `.deploy-failed` diagnostic marker. `deploy.sh` backs up, migrates, switches, reloads, accepts, and automatically restores the prior release on failure. It never uses `pm2 delete`.
 
-Do not run a production deployment from this README alone. Follow [docs/production.md](docs/production.md), [docs/deployment-acceptance.md](docs/deployment-acceptance.md), and [docs/runbook.md](docs/runbook.md).
+GitHub stores the reviewed source but performs no CI or deployment for this repository. An authorized operator pulls a clean reviewed commit on the server and runs the repository's atomic `deploy.sh`; Docker Compose is not used in production.
+
+For a new server, follow the documents in this order:
+
+1. [Complete server deployment guide](docs/server-deployment-guide.md) — Debian/Ubuntu packages, service account, PostgreSQL, secrets, DNS/TLS, Nginx, first deploy, PM2 startup, backup cron, external monitoring, later deploys, and rollback.
+2. [Production configuration reference](docs/production.md) — fixed topology, environment variables, release semantics, backup/restore behavior, and operational constraints.
+3. [Deployment acceptance checklist](docs/deployment-acceptance.md) — revision-specific Linux, PostgreSQL, Nginx, PM2, backup, rollback, and public endpoint evidence.
+4. [Production runbook](docs/runbook.md) and [rollback guide](docs/rollback.md) — diagnosis, incidents, key compromise, restore, and recovery.
 
 ## Verification
 
@@ -112,7 +119,10 @@ Real PostgreSQL, Linux symlink rollback, ShellCheck, and Nginx validation requir
 - [Architecture](docs/architecture.md)
 - [Dashboard and API](docs/dashboard.md)
 - [SDKs](docs/sdk.md)
-- [Production deployment](docs/production.md)
+- [Complete server deployment guide](docs/server-deployment-guide.md)
+- [Production configuration reference](docs/production.md)
+- [Deployment acceptance checklist](docs/deployment-acceptance.md)
+- [Production readiness report](docs/production-readiness-report.md)
 - [Runbook](docs/runbook.md)
 - [Rollback](docs/rollback.md)
 - [Roadmap and boundaries](docs/roadmap.md)
